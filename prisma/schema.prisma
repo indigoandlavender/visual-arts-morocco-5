@@ -1,0 +1,397 @@
+// Moroccan Art Platform - Prisma Schema
+// Graph-style relational database for visual art search engine
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// CORE ENTITIES
+// =============================================================================
+
+model Artist {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  nameArabic          String?  @map("name_arabic")
+  medium              Medium
+  birthYear           Int?     @map("birth_year")
+  deathYear           Int?     @map("death_year")
+  nationality         String
+  moroccanConnection  MoroccanConnection @map("moroccan_connection")
+  biography           String   @db.Text
+  biographyShort      String   @map("biography_short") @db.VarChar(500)
+  activePeriodStart   Int      @map("active_period_start")
+  activePeriodEnd     Int?     @map("active_period_end")
+  externalReferences  Json     @default("[]") @map("external_references")
+
+  // Access control
+  status              ContentStatus @default(DRAFT)
+  accessTier          AccessTier    @default(FREE) @map("access_tier")
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  artworks            Artwork[]
+  cities              ArtistCity[]
+  themes              ArtistTheme[]
+  movements           ArtistMovement[]
+  relatedTo           ArtistRelation[] @relation("RelatedFrom")
+  relatedFrom         ArtistRelation[] @relation("RelatedTo")
+
+  @@index([medium])
+  @@index([status])
+  @@index([activePeriodStart])
+  @@index([accessTier])
+  @@map("artists")
+}
+
+model Artwork {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  title               String
+  titleArabic         String?  @map("title_arabic")
+  year                Int?
+  yearApproximate     Boolean  @default(false) @map("year_approximate")
+  yearRangeStart      Int?     @map("year_range_start")
+  yearRangeEnd        Int?     @map("year_range_end")
+  medium              Medium
+  technique           String?
+  dimensions          String?
+  description         String   @db.Text
+  locationCurrent     String?  @map("location_current")
+  locationCreated     String?  @map("location_created")
+  imageUrl            String?  @map("image_url")
+  imageAlt            String?  @map("image_alt")
+
+  // Iconic image fields
+  isIconic            Boolean  @default(false) @map("is_iconic")
+  iconicSignificance  String?  @map("iconic_significance") @db.Text
+
+  // Access control
+  status              ContentStatus @default(DRAFT)
+  accessTier          AccessTier    @default(FREE) @map("access_tier")
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  artistId            String   @map("artist_id")
+  artist              Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  movementId          String?  @map("movement_id")
+  movement            Movement? @relation(fields: [movementId], references: [id])
+  themes              ArtworkTheme[]
+  cities              ArtworkCity[]
+  iconicDetails       IconicImage?
+
+  @@index([medium])
+  @@index([artistId])
+  @@index([status])
+  @@index([year])
+  @@index([isIconic])
+  @@map("artworks")
+}
+
+model IconicImage {
+  id                  String   @id @default(cuid())
+  subject             String
+  historicalContext   String   @map("historical_context") @db.Text
+  culturalSignificance String  @map("cultural_significance") @db.Text
+  publicationHistory  String[] @map("publication_history")
+  relatedEvent        String?  @map("related_event")
+  relatedEventYear    Int?     @map("related_event_year")
+
+  // Relation
+  artworkId           String   @unique @map("artwork_id")
+  artwork             Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@map("iconic_images")
+}
+
+model Movement {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  nameArabic          String?  @map("name_arabic")
+  periodStart         Int      @map("period_start")
+  periodEnd           Int?     @map("period_end")
+  description         String   @db.Text
+  keyCharacteristics  String[] @map("key_characteristics")
+  geographicScope     GeographicScope @default(MOROCCO_ONLY) @map("geographic_scope")
+
+  // Hierarchy
+  parentMovementId    String?  @map("parent_movement_id")
+  parentMovement      Movement? @relation("MovementHierarchy", fields: [parentMovementId], references: [id])
+  childMovements      Movement[] @relation("MovementHierarchy")
+
+  // Access control
+  status              ContentStatus @default(DRAFT)
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  artists             ArtistMovement[]
+  artworks            Artwork[]
+
+  @@index([periodStart])
+  @@map("movements")
+}
+
+model Theme {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  nameArabic          String?  @map("name_arabic")
+  category            ThemeCategory
+  description         String?  @db.Text
+
+  // Hierarchy
+  parentThemeId       String?  @map("parent_theme_id")
+  parentTheme         Theme?   @relation("ThemeHierarchy", fields: [parentThemeId], references: [id])
+  childThemes         Theme[]  @relation("ThemeHierarchy")
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  artists             ArtistTheme[]
+  artworks            ArtworkTheme[]
+
+  @@map("themes")
+}
+
+model City {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  nameArabic          String?  @map("name_arabic")
+  region              String?
+  country             String   @default("Morocco")
+  latitude            Float?
+  longitude           Float?
+  description         String?  @db.Text
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  artists             ArtistCity[]
+  artworks            ArtworkCity[]
+
+  @@map("cities")
+}
+
+// =============================================================================
+// JOIN TABLES (Many-to-Many Relations)
+// =============================================================================
+
+model ArtistCity {
+  artistId            String   @map("artist_id")
+  artist              Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  cityId              String   @map("city_id")
+  city                City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  relationType        CityRelationType @default(BASED) @map("relation_type")
+
+  @@id([artistId, cityId])
+  @@map("artist_cities")
+}
+
+model ArtistTheme {
+  artistId            String   @map("artist_id")
+  artist              Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  themeId             String   @map("theme_id")
+  theme               Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([artistId, themeId])
+  @@map("artist_themes")
+}
+
+model ArtistMovement {
+  artistId            String   @map("artist_id")
+  artist              Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  movementId          String   @map("movement_id")
+  movement            Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+
+  @@id([artistId, movementId])
+  @@map("artist_movements")
+}
+
+model ArtistRelation {
+  fromArtistId        String   @map("from_artist_id")
+  fromArtist          Artist   @relation("RelatedFrom", fields: [fromArtistId], references: [id], onDelete: Cascade)
+  toArtistId          String   @map("to_artist_id")
+  toArtist            Artist   @relation("RelatedTo", fields: [toArtistId], references: [id], onDelete: Cascade)
+  relationType        ArtistRelationType @default(CONTEMPORARY) @map("relation_type")
+
+  @@id([fromArtistId, toArtistId])
+  @@map("artist_relations")
+}
+
+model ArtworkTheme {
+  artworkId           String   @map("artwork_id")
+  artwork             Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  themeId             String   @map("theme_id")
+  theme               Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([artworkId, themeId])
+  @@map("artwork_themes")
+}
+
+model ArtworkCity {
+  artworkId           String   @map("artwork_id")
+  artwork             Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  cityId              String   @map("city_id")
+  city                City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  relationType        ArtworkCityRelationType @default(DEPICTED) @map("relation_type")
+
+  @@id([artworkId, cityId])
+  @@map("artwork_cities")
+}
+
+// =============================================================================
+// USER & ACCESS CONTROL (Future Implementation)
+// =============================================================================
+
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  emailVerified       DateTime? @map("email_verified")
+  name                String?
+  tier                UserTier @default(FREE)
+  subscriptionExpires DateTime? @map("subscription_expires")
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  savedArtists        SavedArtist[]
+  savedWorks          SavedWork[]
+  savedSearches       SavedSearch[]
+  apiKeys             ApiKey[]
+
+  @@map("users")
+}
+
+model SavedArtist {
+  userId              String   @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistId            String   @map("artist_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@id([userId, artistId])
+  @@map("saved_artists")
+}
+
+model SavedWork {
+  userId              String   @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworkId           String   @map("artwork_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@id([userId, artworkId])
+  @@map("saved_works")
+}
+
+model SavedSearch {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  queryParams         Json     @map("query_params")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("saved_searches")
+}
+
+model ApiKey {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key                 String   @unique
+  name                String
+  permissions         String[] @default([])
+  expiresAt           DateTime? @map("expires_at")
+  lastUsedAt          DateTime? @map("last_used_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("api_keys")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum Medium {
+  PHOTOGRAPHY
+  PAINTING
+  BOTH
+}
+
+enum MoroccanConnection {
+  BORN
+  BASED
+  DIASPORA
+  SIGNIFICANT_WORK
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AccessTier {
+  FREE
+  PREMIUM
+}
+
+enum UserTier {
+  FREE
+  PREMIUM
+  INSTITUTIONAL
+}
+
+enum GeographicScope {
+  MOROCCO_ONLY
+  MAGHREB
+  INTERNATIONAL
+}
+
+enum ThemeCategory {
+  SUBJECT
+  STYLE
+  TECHNIQUE
+  CONCEPT
+}
+
+enum CityRelationType {
+  BORN
+  BASED
+  WORKED
+}
+
+enum ArtworkCityRelationType {
+  DEPICTED
+  CREATED
+}
+
+enum ArtistRelationType {
+  CONTEMPORARY
+  INFLUENCED_BY
+  TEACHER_STUDENT
+  COLLABORATED
+}
