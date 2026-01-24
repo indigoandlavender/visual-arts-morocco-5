@@ -1,62 +1,120 @@
 // =============================================================================
 // Core Type Definitions
-// Moroccan Art Platform
+// Moroccan Art Platform - Google Sheets Backend
 // =============================================================================
 
-// Re-export Prisma types
-export type {
-  Artist,
-  Artwork,
-  IconicImage,
-  Movement,
-  Theme,
-  City,
-  User,
-} from '@prisma/client';
-
 // =============================================================================
-// ENUMS (Mirror Prisma enums for client-side use)
+// ENUMS
 // =============================================================================
 
-export enum Medium {
-  PHOTOGRAPHY = 'PHOTOGRAPHY',
-  PAINTING = 'PAINTING',
-  BOTH = 'BOTH',
+export type Medium = 'PHOTOGRAPHY' | 'PAINTING' | 'BOTH';
+export type ContentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type AccessTier = 'FREE' | 'PREMIUM';
+export type UserTier = 'FREE' | 'PREMIUM' | 'INSTITUTIONAL';
+export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPTUAL';
+export type CityRelationType = 'BORN' | 'BASED' | 'WORKED' | 'DEPICTED' | 'CREATED';
+export type ArtistRelationType = 'CONTEMPORARY' | 'INFLUENCED_BY' | 'TEACHER_STUDENT' | 'COLLABORATED';
+
+// =============================================================================
+// CORE ENTITY TYPES
+// =============================================================================
+
+export interface Artist {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  medium: Medium;
+  birthYear?: number | null;
+  deathYear?: number | null;
+  biographyShort?: string | null;
+  biography?: string | null;
+  activePeriodStart?: number | null;
+  activePeriodEnd?: number | null;
+  photoUrl?: string | null;
+  websiteUrl?: string | null;
+  status: ContentStatus;
+  // Relations
+  cities?: { city: City; relationType: CityRelationType }[];
+  themes?: Theme[];
+  movements?: Movement[];
 }
 
-export enum MoroccanConnection {
-  BORN = 'BORN',
-  BASED = 'BASED',
-  DIASPORA = 'DIASPORA',
-  SIGNIFICANT_WORK = 'SIGNIFICANT_WORK',
+export interface Artwork {
+  id: string;
+  slug: string;
+  title: string;
+  titleArabic?: string | null;
+  artistId: string;
+  artist?: { id: string; slug: string; name: string; medium: Medium };
+  medium: Medium;
+  year?: number | null;
+  yearEnd?: number | null;
+  description?: string | null;
+  dimensions?: string | null;
+  materialsAndTechniques?: string | null;
+  currentLocation?: string | null;
+  imageUrl?: string | null;
+  isIconic: boolean;
+  movementId?: string | null;
+  movement?: Movement;
+  status: ContentStatus;
+  // Relations
+  themes?: Theme[];
+  cities?: { city: City; relationType: CityRelationType }[];
+  iconicImage?: IconicImage;
 }
 
-export enum ContentStatus {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
+export interface Movement {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  description?: string | null;
+  periodStart?: number | null;
+  periodEnd?: number | null;
 }
 
-export enum AccessTier {
-  FREE = 'FREE',
-  PREMIUM = 'PREMIUM',
+export interface Theme {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  description?: string | null;
+  category: ThemeCategory;
 }
 
-export enum UserTier {
-  FREE = 'FREE',
-  PREMIUM = 'PREMIUM',
-  INSTITUTIONAL = 'INSTITUTIONAL',
+export interface City {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  region?: string | null;
+  country: string;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
-export enum ThemeCategory {
-  SUBJECT = 'SUBJECT',
-  STYLE = 'STYLE',
-  TECHNIQUE = 'TECHNIQUE',
-  CONCEPT = 'CONCEPT',
+export interface IconicImage {
+  subject?: string | null;
+  composition?: string | null;
+  colorPalette?: string | null;
+  technique?: string | null;
+  historicalContext?: string | null;
+  significance?: string | null;
+  interpretation?: string | null;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string | null;
+  tier: UserTier;
 }
 
 // =============================================================================
-// QUERY & FILTER TYPES
+// SEARCH & FILTER TYPES
 // =============================================================================
 
 export interface SearchParams {
@@ -69,7 +127,6 @@ export interface SearchParams {
   movement?: string | string[];
   artist?: string;
   iconic?: boolean;
-  moroccanConnection?: MoroccanConnection | MoroccanConnection[];
   page?: number;
   limit?: number;
   sort?: SortOption;
@@ -109,175 +166,6 @@ export interface PaginatedResult<T> {
     hasPrev: boolean;
   };
   facets?: FilterFacets;
-}
-
-// =============================================================================
-// COMPOSITE TYPES (Joined Data)
-// =============================================================================
-
-export interface ArtistWithRelations {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  medium: Medium;
-  birthYear?: number | null;
-  deathYear?: number | null;
-  nationality: string;
-  moroccanConnection: MoroccanConnection;
-  biography: string;
-  biographyShort: string;
-  activePeriodStart: number;
-  activePeriodEnd?: number | null;
-  externalReferences: ExternalReference[];
-  status: ContentStatus;
-  accessTier: AccessTier;
-  cities: CityWithRelation[];
-  themes: ThemeBasic[];
-  movements: MovementBasic[];
-  artworks: ArtworkBasic[];
-  relatedArtists: ArtistBasic[];
-}
-
-export interface ArtworkWithRelations {
-  id: string;
-  slug: string;
-  title: string;
-  titleArabic?: string | null;
-  year?: number | null;
-  yearApproximate: boolean;
-  medium: Medium;
-  technique?: string | null;
-  dimensions?: string | null;
-  description: string;
-  locationCurrent?: string | null;
-  locationCreated?: string | null;
-  imageUrl?: string | null;
-  imageAlt?: string | null;
-  isIconic: boolean;
-  iconicSignificance?: string | null;
-  artist: ArtistBasic;
-  movement?: MovementBasic | null;
-  themes: ThemeBasic[];
-  cities: CityBasic[];
-  iconicDetails?: IconicImageDetails | null;
-}
-
-export interface MovementWithRelations {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  periodStart: number;
-  periodEnd?: number | null;
-  description: string;
-  keyCharacteristics: string[];
-  geographicScope: string;
-  parentMovement?: MovementBasic | null;
-  childMovements: MovementBasic[];
-  artists: ArtistBasic[];
-  artworks: ArtworkBasic[];
-}
-
-export interface ThemeWithRelations {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  category: ThemeCategory;
-  description?: string | null;
-  parentTheme?: ThemeBasic | null;
-  childThemes: ThemeBasic[];
-  artists: ArtistBasic[];
-  artworks: ArtworkBasic[];
-}
-
-export interface CityWithRelations {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  region?: string | null;
-  country: string;
-  description?: string | null;
-  artists: ArtistBasic[];
-  artworks: ArtworkBasic[];
-}
-
-// =============================================================================
-// BASIC TYPES (For lists and references)
-// =============================================================================
-
-export interface ArtistBasic {
-  id: string;
-  slug: string;
-  name: string;
-  medium: Medium;
-  birthYear?: number | null;
-  deathYear?: number | null;
-  biographyShort: string;
-  activePeriodStart: number;
-  activePeriodEnd?: number | null;
-}
-
-export interface ArtworkBasic {
-  id: string;
-  slug: string;
-  title: string;
-  year?: number | null;
-  medium: Medium;
-  imageUrl?: string | null;
-  imageAlt?: string | null;
-  isIconic: boolean;
-  artistId: string;
-  artistName?: string;
-  artistSlug?: string;
-}
-
-export interface MovementBasic {
-  id: string;
-  slug: string;
-  name: string;
-  periodStart: number;
-  periodEnd?: number | null;
-}
-
-export interface ThemeBasic {
-  id: string;
-  slug: string;
-  name: string;
-  category: ThemeCategory;
-}
-
-export interface CityBasic {
-  id: string;
-  slug: string;
-  name: string;
-  region?: string | null;
-}
-
-export interface CityWithRelation extends CityBasic {
-  relationType: 'BORN' | 'BASED' | 'WORKED';
-}
-
-// =============================================================================
-// EMBEDDED TYPES
-// =============================================================================
-
-export interface ExternalReference {
-  type: 'museum' | 'publication' | 'gallery' | 'archive' | 'wikipedia' | 'official_site';
-  title: string;
-  url: string;
-  description?: string;
-}
-
-export interface IconicImageDetails {
-  subject: string;
-  historicalContext: string;
-  culturalSignificance: string;
-  publicationHistory: string[];
-  relatedEvent?: string | null;
-  relatedEventYear?: number | null;
 }
 
 // =============================================================================
