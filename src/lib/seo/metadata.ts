@@ -65,7 +65,7 @@ export function generateHomeMetadata(): Metadata {
 
 export function generateArtistMetadata(artist: ArtistForMetadata): Metadata {
   const title = `${artist.name} | Morocco Art Archive`;
-  const description = artist.biographyShort;
+  const description = artist.biographyShort || undefined;
   const url = `${SITE_URL}/artists/${artist.slug}`;
 
   return {
