@@ -1,31 +1,45 @@
 // =============================================================================
-// Query Exports
+// Query Exports - Google Sheets Backend
 // Moroccan Art Platform
 // =============================================================================
 
-// Artists
-export * from './artists';
-
-// Artworks
-export * from './artworks';
-
-// Movements
 export {
+  // Artists
+  getAllArtists,
+  getArtistBySlug,
+  getArtistById,
+  getArtistsByMedium,
+  getArtistsByMovement,
+  getArtistsByTheme,
+  getArtistsByCity,
+  getRelatedArtists,
+  countArtists,
+
+  // Artworks
+  getAllArtworks,
+  getArtworkBySlug,
+  getArtworkById,
+  getArtworksByArtist,
+  getArtworksByTheme,
+  getArtworksByCity,
+  getIconicArtworks,
+  countArtworks,
+
+  // Movements
+  getAllMovements,
   getMovementBySlug,
-  getMovements,
-  getMovementFacets,
-} from './movements';
+  countMovements,
 
-// Themes
-export {
+  // Themes
+  getAllThemes,
   getThemeBySlug,
-  getThemes,
-  getThemesByCategory,
-} from './themes';
+  countThemes,
 
-// Cities
-export {
+  // Cities
+  getAllCities,
   getCityBySlug,
-  getCities,
-  getCitiesByRegion,
-} from './cities';
+  countCities,
+
+  // Search
+  searchAll,
+} from '../db/data-access';
