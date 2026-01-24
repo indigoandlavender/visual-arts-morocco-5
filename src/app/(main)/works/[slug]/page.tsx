@@ -112,15 +112,14 @@ export default async function ArtworkPage({ params }: PageProps) {
         </section>
 
         {/* Section 6: Iconic Significance (if applicable) */}
-        {artwork.isIconic && artwork.iconicDetails && (
+        {artwork.isIconic && artwork.iconicImage && (
           <section data-section="iconic-significance">
             {/*
-              Data: {artwork.iconicDetails}
-              - Subject: {artwork.iconicDetails.subject}
-              - Historical Context: {artwork.iconicDetails.historicalContext}
-              - Cultural Significance: {artwork.iconicDetails.culturalSignificance}
-              - Publication History: {artwork.iconicDetails.publicationHistory}
-              - Related Event: {artwork.iconicDetails.relatedEvent}
+              Data: {artwork.iconicImage}
+              - Subject: {artwork.iconicImage.subject}
+              - Historical Context: {artwork.iconicImage.historicalContext}
+              - Significance: {artwork.iconicImage.significance}
+              - Interpretation: {artwork.iconicImage.interpretation}
             */}
           </section>
         )}
