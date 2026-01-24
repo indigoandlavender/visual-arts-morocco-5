@@ -7,8 +7,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtists } from '@/lib/queries/artists';
-import { getArtworks } from '@/lib/queries/artworks';
+import { getArtists } from '@/lib/queries';
+import { getArtworks } from '@/lib/queries';
 import type { ApiResponse } from '@/types';
 
 // =============================================================================

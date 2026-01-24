@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { generateListMetadata } from '@/lib/seo';
-import { getMovements } from '@/lib/queries/movements';
+import { getMovements } from '@/lib/queries';
 
 export const metadata: Metadata = generateListMetadata('movements');
 

@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getCityBySlug } from '@/lib/queries/cities';
+import { getCityBySlug } from '@/lib/queries';
 import { generateCityMetadata, generateBreadcrumbs } from '@/lib/seo';
 import { generateCityJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
 

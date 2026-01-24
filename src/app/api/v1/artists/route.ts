@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtists, getArtistFacets } from '@/lib/queries/artists';
+import { getArtists, getArtistFacets } from '@/lib/queries';
 import type { SearchParams, ApiResponse, PaginatedResult, ArtistBasic } from '@/types';
 
 // =============================================================================

@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { generateListMetadata } from '@/lib/seo';
-import { getThemes, getThemesByCategory } from '@/lib/queries/themes';
+import { getThemes, getThemesByCategory } from '@/lib/queries';
 
 export const metadata: Metadata = generateListMetadata('themes');
 

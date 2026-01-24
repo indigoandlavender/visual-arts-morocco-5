@@ -4,9 +4,9 @@
 // =============================================================================
 
 import type { Metadata } from 'next';
-import { getArtistsByMedium, getArtistCount } from '@/lib/queries/artists';
-import { getIconicWorks, getArtworkCount } from '@/lib/queries/artworks';
-import { getMovements } from '@/lib/queries/movements';
+import { getArtistsByMedium, getArtistCount } from '@/lib/queries';
+import { getIconicWorks, getArtworkCount } from '@/lib/queries';
+import { getMovements } from '@/lib/queries';
 
 export const metadata: Metadata = {
   title: 'Moroccan Painting | Morocco Art Archive',

@@ -6,9 +6,9 @@
 import type { Metadata } from 'next';
 import { generateHomeMetadata } from '@/lib/seo';
 import { generateSearchActionJsonLd, generateOrganizationJsonLd } from '@/lib/seo';
-import { getFeaturedArtists } from '@/lib/queries/artists';
-import { getFeaturedWorks, getArtworkCount } from '@/lib/queries/artworks';
-import { getArtistCount } from '@/lib/queries/artists';
+import { getFeaturedArtists } from '@/lib/queries';
+import { getFeaturedWorks, getArtworkCount } from '@/lib/queries';
+import { getArtistCount } from '@/lib/queries';
 
 export const metadata: Metadata = generateHomeMetadata();
 

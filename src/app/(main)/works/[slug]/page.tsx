@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArtworkBySlug, getRelatedArtworks } from '@/lib/queries/artworks';
+import { getArtworkBySlug, getRelatedArtworks } from '@/lib/queries';
 import { generateArtworkMetadata, generateBreadcrumbs } from '@/lib/seo';
 import { generateArtworkJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
 

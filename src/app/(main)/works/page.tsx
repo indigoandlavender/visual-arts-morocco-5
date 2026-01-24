@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { generateListMetadata } from '@/lib/seo';
-import { getArtworks, getArtworkFacets, getArtworkCount } from '@/lib/queries/artworks';
+import { getArtworks, getArtworkFacets, getArtworkCount } from '@/lib/queries';
 import { parseURLParams } from '@/lib/search';
 import type { URLQueryParams } from '@/lib/search';
 

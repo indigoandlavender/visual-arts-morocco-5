@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getThemeBySlug } from '@/lib/queries/themes';
+import { getThemeBySlug } from '@/lib/queries';
 import { generateThemeMetadata, generateBreadcrumbs } from '@/lib/seo';
 import { generateBreadcrumbJsonLd } from '@/lib/seo';
 

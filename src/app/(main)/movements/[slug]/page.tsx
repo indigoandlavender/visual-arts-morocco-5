@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getMovementBySlug } from '@/lib/queries/movements';
+import { getMovementBySlug } from '@/lib/queries';
 import { generateMovementMetadata, generateBreadcrumbs } from '@/lib/seo';
 import { generateMovementJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
 

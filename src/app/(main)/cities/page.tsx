@@ -5,7 +5,7 @@
 
 import type { Metadata } from 'next';
 import { generateListMetadata } from '@/lib/seo';
-import { getCities, getRegions, getCityFacets } from '@/lib/queries/cities';
+import { getCities, getRegions, getCityFacets } from '@/lib/queries';
 
 export const metadata: Metadata = generateListMetadata('cities');
 

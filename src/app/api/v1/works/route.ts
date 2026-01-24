@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtworks, getArtworkFacets } from '@/lib/queries/artworks';
+import { getArtworks, getArtworkFacets } from '@/lib/queries';
 import type { SearchParams, ApiResponse, PaginatedResult, ArtworkBasic } from '@/types';
 
 // =============================================================================
