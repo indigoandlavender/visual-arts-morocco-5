@@ -3,7 +3,7 @@
 // Moroccan Art Platform
 // =============================================================================
 
-import { Medium, MoroccanConnection, ThemeCategory, SortOption } from './index';
+import { Medium, ThemeCategory, SortOption } from './index';
 
 // =============================================================================
 // FILTER SCHEMA DEFINITIONS
@@ -54,7 +54,7 @@ export interface SearchQuery {
 
   // Entity filters
   medium?: Medium[];
-  moroccanConnection?: MoroccanConnection[];
+  moroccanConnection?: string[];
 
   // Relational filters (by slug or id)
   cityIds?: string[];
