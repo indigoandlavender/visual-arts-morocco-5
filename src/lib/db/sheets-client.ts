@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import path from 'path';
+import fs from 'fs';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
@@ -8,10 +9,28 @@ let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 export async function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(process.cwd(), 'credentials/google-service-account.json'),
-    scopes: SCOPES,
-  });
+  let auth;
+
+  // Check for credentials in environment variable (Vercel)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: SCOPES,
+    });
+  }
+  // Fall back to credentials file (local dev)
+  else {
+    const keyFilePath = path.join(process.cwd(), 'credentials/google-service-account.json');
+    if (fs.existsSync(keyFilePath)) {
+      auth = new google.auth.GoogleAuth({
+        keyFile: keyFilePath,
+        scopes: SCOPES,
+      });
+    } else {
+      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY env var or add credentials file.');
+    }
+  }
 
   sheetsClient = google.sheets({ version: 'v4', auth });
   return sheetsClient;
