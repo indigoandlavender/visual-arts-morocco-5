@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getArtists, getArtistFacets } from '@/lib/queries';
-import type { SearchParams, ApiResponse, PaginatedResult, ArtistBasic } from '@/types';
+import type { ApiResponse, Artist } from '@/types';
 
 // =============================================================================
 // GET /api/v1/artists
@@ -15,40 +15,54 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const params: SearchParams = {
-      q: searchParams.get('q') || undefined,
-      medium: searchParams.get('medium') as any || undefined,
-      periodStart: searchParams.get('periodStart')
-        ? parseInt(searchParams.get('periodStart')!, 10)
-        : undefined,
-      periodEnd: searchParams.get('periodEnd')
-        ? parseInt(searchParams.get('periodEnd')!, 10)
-        : undefined,
-      city: searchParams.get('city') || undefined,
-      theme: searchParams.get('theme') || undefined,
-      movement: searchParams.get('movement') || undefined,
-      page: searchParams.get('page')
-        ? parseInt(searchParams.get('page')!, 10)
-        : 1,
-      limit: searchParams.get('limit')
-        ? Math.min(parseInt(searchParams.get('limit')!, 10), 100)
-        : 24,
-      sort: (searchParams.get('sort') as any) || 'name',
-      order: (searchParams.get('order') as 'asc' | 'desc') || 'asc',
-    };
+    // Get all artists
+    const artists = await getArtists();
 
-    // Fetch data
-    const [result, facets] = await Promise.all([
-      getArtists(params),
-      searchParams.get('facets') === 'true' ? getArtistFacets() : null,
-    ]);
+    // Optional: filter by medium
+    const medium = searchParams.get('medium');
+    let filtered = artists;
+    if (medium) {
+      filtered = artists.filter(a =>
+        a.medium === medium.toUpperCase() || a.medium === 'BOTH'
+      );
+    }
 
-    const response: ApiResponse<PaginatedResult<ArtistBasic>> = {
+    // Optional: filter by search query
+    const q = searchParams.get('q');
+    if (q) {
+      const query = q.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.name.toLowerCase().includes(query) ||
+        a.biographyShort?.toLowerCase().includes(query)
+      );
+    }
+
+    // Pagination
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 100);
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + limit);
+
+    // Get facets if requested
+    const facets = searchParams.get('facets') === 'true'
+      ? await getArtistFacets()
+      : undefined;
+
+    const response: ApiResponse<{
+      data: Artist[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+      facets?: unknown;
+    }> = {
       success: true,
       data: {
-        ...result,
-        facets: facets || undefined,
+        data: paginated,
+        pagination: {
+          page,
+          limit,
+          total: filtered.length,
+          totalPages: Math.ceil(filtered.length / limit),
+        },
+        facets,
       },
       meta: {
         timestamp: new Date().toISOString(),

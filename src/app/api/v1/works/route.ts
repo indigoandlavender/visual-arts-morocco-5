@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getArtworks, getArtworkFacets } from '@/lib/queries';
-import type { SearchParams, ApiResponse, PaginatedResult, ArtworkBasic } from '@/types';
+import type { ApiResponse, Artwork } from '@/types';
 
 // =============================================================================
 // GET /api/v1/works
@@ -15,42 +15,66 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const params: SearchParams = {
-      q: searchParams.get('q') || undefined,
-      medium: searchParams.get('medium') as any || undefined,
-      periodStart: searchParams.get('periodStart')
-        ? parseInt(searchParams.get('periodStart')!, 10)
-        : undefined,
-      periodEnd: searchParams.get('periodEnd')
-        ? parseInt(searchParams.get('periodEnd')!, 10)
-        : undefined,
-      city: searchParams.get('city') || undefined,
-      theme: searchParams.get('theme') || undefined,
-      movement: searchParams.get('movement') || undefined,
-      artist: searchParams.get('artist') || undefined,
-      iconic: searchParams.get('iconic') === 'true',
-      page: searchParams.get('page')
-        ? parseInt(searchParams.get('page')!, 10)
-        : 1,
-      limit: searchParams.get('limit')
-        ? Math.min(parseInt(searchParams.get('limit')!, 10), 100)
-        : 24,
-      sort: (searchParams.get('sort') as any) || 'year',
-      order: (searchParams.get('order') as 'asc' | 'desc') || 'desc',
-    };
+    // Get all artworks
+    const artworks = await getArtworks();
 
-    // Fetch data
-    const [result, facets] = await Promise.all([
-      getArtworks(params),
-      searchParams.get('facets') === 'true' ? getArtworkFacets() : null,
-    ]);
+    // Optional: filter by medium
+    const medium = searchParams.get('medium');
+    let filtered = artworks;
+    if (medium) {
+      filtered = artworks.filter(a =>
+        a.medium === medium.toUpperCase() || a.medium === 'BOTH'
+      );
+    }
 
-    const response: ApiResponse<PaginatedResult<ArtworkBasic>> = {
+    // Optional: filter by iconic
+    const iconic = searchParams.get('iconic');
+    if (iconic === 'true') {
+      filtered = filtered.filter(a => a.isIconic);
+    }
+
+    // Optional: filter by artist
+    const artistId = searchParams.get('artist');
+    if (artistId) {
+      filtered = filtered.filter(a => a.artistId === artistId);
+    }
+
+    // Optional: filter by search query
+    const q = searchParams.get('q');
+    if (q) {
+      const query = q.toLowerCase();
+      filtered = filtered.filter(a =>
+        a.title.toLowerCase().includes(query) ||
+        a.description?.toLowerCase().includes(query)
+      );
+    }
+
+    // Pagination
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 100);
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + limit);
+
+    // Get facets if requested
+    const facets = searchParams.get('facets') === 'true'
+      ? await getArtworkFacets()
+      : undefined;
+
+    const response: ApiResponse<{
+      data: Artwork[];
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+      facets?: unknown;
+    }> = {
       success: true,
       data: {
-        ...result,
-        facets: facets || undefined,
+        data: paginated,
+        pagination: {
+          page,
+          limit,
+          total: filtered.length,
+          totalPages: Math.ceil(filtered.length / limit),
+        },
+        facets,
       },
       meta: {
         timestamp: new Date().toISOString(),
