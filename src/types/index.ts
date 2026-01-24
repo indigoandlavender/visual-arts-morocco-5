@@ -11,7 +11,7 @@ export type Medium = 'PHOTOGRAPHY' | 'PAINTING' | 'BOTH';
 export type ContentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type AccessTier = 'FREE' | 'PREMIUM';
 export type UserTier = 'FREE' | 'PREMIUM' | 'INSTITUTIONAL';
-export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPTUAL';
+export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPT' | 'CONCEPTUAL';
 export type CityRelationType = 'BORN' | 'BASED' | 'WORKED' | 'DEPICTED' | 'CREATED';
 export type ArtistRelationType = 'CONTEMPORARY' | 'INFLUENCED_BY' | 'TEACHER_STUDENT' | 'COLLABORATED';
 
