@@ -77,8 +77,8 @@ export default async function ArtistPage({ params }: PageProps) {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">{artist.name}</h1>
-              {artist.nameAr && (
-                <p className="text-2xl text-gray-600 mb-2" dir="rtl">{artist.nameAr}</p>
+              {artist.nameArabic && (
+                <p className="text-2xl text-gray-600 mb-2" dir="rtl">{artist.nameArabic}</p>
               )}
               <p className="text-lg text-gray-500">
                 {artist.birthYear}
