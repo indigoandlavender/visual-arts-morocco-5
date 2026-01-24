@@ -150,7 +150,7 @@ export const getArtistFacets = async () => {
     getAllCities(),
   ]);
 
-  const mediums = [...new Set(artists.flatMap(a => a.mediums || []))];
+  const mediums = [...new Set(artists.map(a => a.medium).filter(Boolean))];
 
   return {
     mediums,
