@@ -4,8 +4,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtworkById, getArtworkBySlug } from '@/lib/queries/artworks';
-import type { ApiResponse, ArtworkWithRelations } from '@/types';
+import { getArtworkById, getArtworkBySlug } from '@/lib/queries';
+import type { ApiResponse, Artwork } from '@/types';
 
 // =============================================================================
 // GET /api/v1/works/[id]
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // const userTier = await getUserTier(request);
     // const filteredArtwork = applyAccessFilter(artwork, userTier);
 
-    const response: ApiResponse<ArtworkWithRelations> = {
+    const response: ApiResponse<Artwork> = {
       success: true,
       data: artwork,
       meta: {

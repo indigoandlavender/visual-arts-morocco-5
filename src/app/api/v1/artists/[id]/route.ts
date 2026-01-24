@@ -4,8 +4,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getArtistById, getArtistBySlug } from '@/lib/queries/artists';
-import type { ApiResponse, ArtistWithRelations } from '@/types';
+import { getArtistById, getArtistBySlug } from '@/lib/queries';
+import type { ApiResponse, Artist } from '@/types';
 
 // =============================================================================
 // GET /api/v1/artists/[id]
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // const userTier = await getUserTier(request);
     // const filteredArtist = applyAccessFilter(artist, userTier);
 
-    const response: ApiResponse<ArtistWithRelations> = {
+    const response: ApiResponse<Artist> = {
       success: true,
       data: artist,
       meta: {
