@@ -3,34 +3,65 @@
 // Moroccan Art Platform
 // =============================================================================
 
-import type {
-  ArtistWithRelations,
-  ArtworkWithRelations,
-  MovementWithRelations,
-  CityWithRelations,
-} from '@/types';
-
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://moroccoartarchive.com';
+
+// Simple types for JSON-LD generation
+interface ArtistForJsonLd {
+  slug: string;
+  name: string;
+  biographyShort?: string | null;
+  birthYear?: number | null;
+  deathYear?: number | null;
+  medium: string;
+  themes?: { name: string }[];
+}
+
+interface ArtworkForJsonLd {
+  slug: string;
+  title: string;
+  description?: string | null;
+  year?: number | null;
+  medium: string;
+  dimensions?: string | null;
+  imageUrl?: string | null;
+  artist?: { name: string; slug: string };
+  movement?: { name: string; slug: string } | null;
+  themes?: { name: string }[];
+}
+
+interface MovementForJsonLd {
+  slug: string;
+  name: string;
+  description?: string | null;
+  periodStart?: number | null;
+  periodEnd?: number | null;
+}
+
+interface CityForJsonLd {
+  slug: string;
+  name: string;
+  description?: string | null;
+  country: string;
+}
 
 // =============================================================================
 // ARTIST JSON-LD (Person Schema)
 // =============================================================================
 
-export function generateArtistJsonLd(artist: ArtistWithRelations): object {
+export function generateArtistJsonLd(artist: ArtistForJsonLd): object {
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Person',
     '@id': `${SITE_URL}/artists/${artist.slug}`,
     name: artist.name,
     url: `${SITE_URL}/artists/${artist.slug}`,
-    description: artist.biographyShort,
+    description: artist.biographyShort || undefined,
     nationality: {
       '@type': 'Country',
-      name: artist.nationality,
+      name: 'Morocco',
     },
   };
 
-  // Birth/death dates
   if (artist.birthYear) {
     jsonLd.birthDate = String(artist.birthYear);
   }
@@ -38,7 +69,6 @@ export function generateArtistJsonLd(artist: ArtistWithRelations): object {
     jsonLd.deathDate = String(artist.deathYear);
   }
 
-  // Job title based on medium
   const jobTitles: Record<string, string[]> = {
     PHOTOGRAPHY: ['Photographer'],
     PAINTING: ['Painter', 'Visual Artist'],
@@ -46,26 +76,8 @@ export function generateArtistJsonLd(artist: ArtistWithRelations): object {
   };
   jsonLd.jobTitle = jobTitles[artist.medium] || ['Visual Artist'];
 
-  // Known for (themes)
-  if (artist.themes.length > 0) {
+  if (artist.themes && artist.themes.length > 0) {
     jsonLd.knowsAbout = artist.themes.map((theme) => theme.name);
-  }
-
-  // Artworks
-  if (artist.artworks.length > 0) {
-    jsonLd.workExample = artist.artworks.slice(0, 5).map((work) => ({
-      '@type': 'VisualArtwork',
-      name: work.title,
-      url: `${SITE_URL}/works/${work.slug}`,
-    }));
-  }
-
-  // Same as (external references)
-  const sameAs = artist.externalReferences
-    .filter((ref) => ref.url)
-    .map((ref) => ref.url);
-  if (sameAs.length > 0) {
-    jsonLd.sameAs = sameAs;
   }
 
   return jsonLd;
@@ -75,61 +87,46 @@ export function generateArtistJsonLd(artist: ArtistWithRelations): object {
 // ARTWORK JSON-LD (VisualArtwork Schema)
 // =============================================================================
 
-export function generateArtworkJsonLd(artwork: ArtworkWithRelations): object {
+export function generateArtworkJsonLd(artwork: ArtworkForJsonLd): object {
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'VisualArtwork',
     '@id': `${SITE_URL}/works/${artwork.slug}`,
     name: artwork.title,
     url: `${SITE_URL}/works/${artwork.slug}`,
-    description: artwork.description,
-    creator: {
+    description: artwork.description || undefined,
+  };
+
+  if (artwork.artist) {
+    jsonLd.creator = {
       '@type': 'Person',
       name: artwork.artist.name,
       url: `${SITE_URL}/artists/${artwork.artist.slug}`,
-    },
-  };
+    };
+  }
 
-  // Date
   if (artwork.year) {
     jsonLd.dateCreated = String(artwork.year);
   }
 
-  // Art form / medium
   const artForms: Record<string, string> = {
     PHOTOGRAPHY: 'photograph',
     PAINTING: 'painting',
   };
   jsonLd.artform = artForms[artwork.medium] || artwork.medium.toLowerCase();
 
-  // Technique
-  if (artwork.technique) {
-    jsonLd.artMedium = artwork.technique;
-  }
-
-  // Dimensions
   if (artwork.dimensions) {
     jsonLd.size = artwork.dimensions;
   }
 
-  // Location
-  if (artwork.locationCurrent) {
-    jsonLd.locationCreated = {
-      '@type': 'Place',
-      name: artwork.locationCurrent,
-    };
-  }
-
-  // Image
   if (artwork.imageUrl) {
     jsonLd.image = {
       '@type': 'ImageObject',
       url: artwork.imageUrl,
-      caption: artwork.imageAlt || artwork.title,
+      caption: artwork.title,
     };
   }
 
-  // Movement
   if (artwork.movement) {
     jsonLd.isPartOf = {
       '@type': 'VisualArtsEvent',
@@ -138,8 +135,7 @@ export function generateArtworkJsonLd(artwork: ArtworkWithRelations): object {
     };
   }
 
-  // Keywords (themes)
-  if (artwork.themes.length > 0) {
+  if (artwork.themes && artwork.themes.length > 0) {
     jsonLd.keywords = artwork.themes.map((t) => t.name).join(', ');
   }
 
@@ -147,28 +143,23 @@ export function generateArtworkJsonLd(artwork: ArtworkWithRelations): object {
 }
 
 // =============================================================================
-// MOVEMENT JSON-LD (Event/MovementOrPeriod)
+// MOVEMENT JSON-LD
 // =============================================================================
 
-export function generateMovementJsonLd(movement: MovementWithRelations): object {
+export function generateMovementJsonLd(movement: MovementForJsonLd): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'VisualArtsEvent',
     '@id': `${SITE_URL}/movements/${movement.slug}`,
     name: movement.name,
     url: `${SITE_URL}/movements/${movement.slug}`,
-    description: movement.description,
-    startDate: String(movement.periodStart),
+    description: movement.description || undefined,
+    startDate: movement.periodStart ? String(movement.periodStart) : undefined,
     endDate: movement.periodEnd ? String(movement.periodEnd) : undefined,
     location: {
       '@type': 'Country',
       name: 'Morocco',
     },
-    performer: movement.artists.slice(0, 10).map((artist) => ({
-      '@type': 'Person',
-      name: artist.name,
-      url: `${SITE_URL}/artists/${artist.slug}`,
-    })),
   };
 }
 
@@ -176,14 +167,14 @@ export function generateMovementJsonLd(movement: MovementWithRelations): object 
 // CITY JSON-LD (Place Schema)
 // =============================================================================
 
-export function generateCityJsonLd(city: CityWithRelations): object {
+export function generateCityJsonLd(city: CityForJsonLd): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'City',
     '@id': `${SITE_URL}/cities/${city.slug}`,
     name: city.name,
     url: `${SITE_URL}/cities/${city.slug}`,
-    description: city.description,
+    description: city.description || undefined,
     containedInPlace: {
       '@type': 'Country',
       name: city.country,
@@ -243,6 +234,5 @@ export function generateOrganizationJsonLd(): object {
     url: SITE_URL,
     description:
       'Comprehensive database of Moroccan visual artists, photographers, and painters',
-    sameAs: [],
   };
 }

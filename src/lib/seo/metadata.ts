@@ -4,13 +4,39 @@
 // =============================================================================
 
 import type { Metadata } from 'next';
-import type {
-  ArtistWithRelations,
-  ArtworkWithRelations,
-  MovementWithRelations,
-  ThemeWithRelations,
-  CityWithRelations,
-} from '@/types';
+
+// Simple types for metadata generation (don't require full relations)
+interface ArtistForMetadata {
+  name: string;
+  slug: string;
+  biographyShort?: string | null;
+}
+
+interface ArtworkForMetadata {
+  title: string;
+  slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  artist?: { name: string };
+}
+
+interface MovementForMetadata {
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+interface ThemeForMetadata {
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+interface CityForMetadata {
+  name: string;
+  slug: string;
+  description?: string | null;
+}
 
 const SITE_NAME = 'Morocco Art Archive';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://moroccoartarchive.com';
@@ -37,7 +63,7 @@ export function generateHomeMetadata(): Metadata {
   };
 }
 
-export function generateArtistMetadata(artist: ArtistWithRelations): Metadata {
+export function generateArtistMetadata(artist: ArtistForMetadata): Metadata {
   const title = `${artist.name} | Morocco Art Archive`;
   const description = artist.biographyShort;
   const url = `${SITE_URL}/artists/${artist.slug}`;
@@ -58,9 +84,10 @@ export function generateArtistMetadata(artist: ArtistWithRelations): Metadata {
   };
 }
 
-export function generateArtworkMetadata(artwork: ArtworkWithRelations): Metadata {
-  const title = `${artwork.title} by ${artwork.artist.name} | Morocco Art Archive`;
-  const description = artwork.description.slice(0, 160);
+export function generateArtworkMetadata(artwork: ArtworkForMetadata): Metadata {
+  const artistName = artwork.artist?.name || 'Unknown Artist';
+  const title = `${artwork.title} by ${artistName} | Morocco Art Archive`;
+  const description = artwork.description?.slice(0, 160) || '';
   const url = `${SITE_URL}/works/${artwork.slug}`;
 
   return {
@@ -73,7 +100,7 @@ export function generateArtworkMetadata(artwork: ArtworkWithRelations): Metadata
       siteName: SITE_NAME,
       type: 'article',
       images: artwork.imageUrl
-        ? [{ url: artwork.imageUrl, alt: artwork.imageAlt || artwork.title }]
+        ? [{ url: artwork.imageUrl, alt: artwork.title }]
         : undefined,
     },
     alternates: {
@@ -82,9 +109,9 @@ export function generateArtworkMetadata(artwork: ArtworkWithRelations): Metadata
   };
 }
 
-export function generateMovementMetadata(movement: MovementWithRelations): Metadata {
+export function generateMovementMetadata(movement: MovementForMetadata): Metadata {
   const title = `${movement.name} | Moroccan Art Movements | Morocco Art Archive`;
-  const description = movement.description.slice(0, 160);
+  const description = movement.description?.slice(0, 160) || '';
   const url = `${SITE_URL}/movements/${movement.slug}`;
 
   return {
@@ -103,7 +130,7 @@ export function generateMovementMetadata(movement: MovementWithRelations): Metad
   };
 }
 
-export function generateThemeMetadata(theme: ThemeWithRelations): Metadata {
+export function generateThemeMetadata(theme: ThemeForMetadata): Metadata {
   const title = `${theme.name} | Themes in Moroccan Art | Morocco Art Archive`;
   const description =
     theme.description?.slice(0, 160) ||
@@ -126,7 +153,7 @@ export function generateThemeMetadata(theme: ThemeWithRelations): Metadata {
   };
 }
 
-export function generateCityMetadata(city: CityWithRelations): Metadata {
+export function generateCityMetadata(city: CityForMetadata): Metadata {
   const title = `${city.name} | Moroccan Art by Location | Morocco Art Archive`;
   const description =
     city.description?.slice(0, 160) ||
