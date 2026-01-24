@@ -6,9 +6,12 @@
 import type { Metadata } from 'next';
 import { generateHomeMetadata } from '@/lib/seo';
 import { generateSearchActionJsonLd, generateOrganizationJsonLd } from '@/lib/seo';
-import { getFeaturedArtists } from '@/lib/queries';
-import { getFeaturedWorks, getArtworkCount } from '@/lib/queries';
-import { getArtistCount } from '@/lib/queries';
+import {
+  getFeaturedArtists,
+  getFeaturedWorks,
+  getArtistCount,
+  getArtworkCount,
+} from '@/lib/queries';
 
 export const metadata: Metadata = generateHomeMetadata();
 
@@ -19,16 +22,20 @@ export const metadata: Metadata = generateHomeMetadata();
 export default async function HomePage() {
   // Fetch data in parallel
   const [
-    featuredArtists,
-    featuredWorks,
+    allFeaturedArtists,
+    allFeaturedWorks,
     artistCount,
     artworkCount,
   ] = await Promise.all([
-    getFeaturedArtists(6),
-    getFeaturedWorks(4),
+    getFeaturedArtists(),
+    getFeaturedWorks(),
     getArtistCount(),
     getArtworkCount(),
   ]);
+
+  // Limit for display
+  const featuredArtists = allFeaturedArtists.slice(0, 6);
+  const featuredWorks = allFeaturedWorks.slice(0, 4);
 
   // JSON-LD structured data
   const jsonLd = [generateSearchActionJsonLd(), generateOrganizationJsonLd()];
