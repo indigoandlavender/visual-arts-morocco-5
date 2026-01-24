@@ -254,7 +254,7 @@ function buildArtwork(
     id: row.id,
     slug: row.slug,
     title: row.title,
-    titleAr: row.titleAr,
+    titleArabic: row.titleAr,
     artistId: row.artistId,
     artist: artistRow ? {
       id: artistRow.id,
