@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 // =============================================================================
 // Cities Index Page
 // Moroccan Art Platform

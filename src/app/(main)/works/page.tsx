@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 // =============================================================================
 // Works Index Page
 // Moroccan Art Platform

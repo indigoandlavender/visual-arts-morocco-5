@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 // =============================================================================
 // Artists API Route
 // Moroccan Art Platform
