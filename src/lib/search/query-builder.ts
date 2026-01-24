@@ -12,7 +12,7 @@ import type {
   FacetBucket,
   TIME_PERIOD_BUCKETS,
 } from '@/types/search';
-import type { Medium, MoroccanConnection } from '@/types';
+import type { Medium } from '@/types';
 
 // =============================================================================
 // URL PARAMETER PARSING
@@ -27,7 +27,7 @@ export function parseURLParams(params: URLQueryParams): SearchQuery {
       : undefined,
 
     moroccanConnection: params.connection
-      ? (params.connection.split(',').map((c) => c.toUpperCase()) as MoroccanConnection[])
+      ? params.connection.split(',').map((c) => c.toUpperCase())
       : undefined,
 
     cityIds: params.city ? params.city.split(',') : undefined,
