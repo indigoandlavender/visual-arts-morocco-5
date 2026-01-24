@@ -14,7 +14,7 @@ export const metadata: Metadata = generateListMetadata('movements');
 // =============================================================================
 
 export default async function MovementsPage() {
-  const movementsResult = await getMovements({ limit: 50 });
+  const movements = await getMovements();
 
   return (
     <div>
@@ -30,7 +30,7 @@ export default async function MovementsPage() {
       {/* Section 2: Timeline View */}
       <section data-section="timeline">
         {/*
-          Data: {movementsResult.data}
+          Data: {movements}
           Display: Chronological timeline of movements
           - Each movement positioned by periodStart
           - Visual representation of duration (periodStart to periodEnd)
@@ -40,7 +40,7 @@ export default async function MovementsPage() {
       {/* Section 3: Movements List */}
       <section data-section="movements-list">
         {/*
-          Data: {movementsResult.data}
+          Data: {movements}
           Display: List/grid of movement cards
           Each card shows:
           - Name

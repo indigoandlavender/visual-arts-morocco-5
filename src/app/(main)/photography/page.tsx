@@ -4,9 +4,13 @@
 // =============================================================================
 
 import type { Metadata } from 'next';
-import { getArtistsByMedium, getArtistCount } from '@/lib/queries';
-import { getIconicWorks, getArtworkCount } from '@/lib/queries';
-import { getMovements } from '@/lib/queries';
+import {
+  getArtistsByMedium,
+  getIconicWorks,
+  getMovements,
+  countArtists,
+  countArtworks,
+} from '@/lib/queries';
 
 export const metadata: Metadata = {
   title: 'Moroccan Photography | Morocco Art Archive',
@@ -24,18 +28,21 @@ export const metadata: Metadata = {
 export default async function PhotographyPage() {
   // Fetch data in parallel
   const [
-    photographersResult,
+    photographers,
     iconicPhotos,
-    photographerCount,
-    photoCount,
     movements,
+    totalArtists,
+    totalArtworks,
   ] = await Promise.all([
-    getArtistsByMedium('PHOTOGRAPHY', { limit: 24 }),
-    getIconicWorks({ medium: 'PHOTOGRAPHY' as any, limit: 6 }),
-    getArtistCount({ medium: 'PHOTOGRAPHY' as any }),
-    getArtworkCount({ medium: 'PHOTOGRAPHY' as any }),
-    getMovements({ limit: 10 }),
+    getArtistsByMedium('PHOTOGRAPHY'),
+    getIconicWorks(),
+    getMovements(),
+    countArtists(),
+    countArtworks(),
   ]);
+
+  // Filter for photography
+  const photographyWorks = iconicPhotos.filter(w => w.medium === 'PHOTOGRAPHY');
 
   return (
     <div>
@@ -54,15 +61,15 @@ export default async function PhotographyPage() {
       <section data-section="statistics">
         {/*
           Data:
-          - Photographers: {photographerCount}
-          - Photographs: {photoCount}
+          - Photographers: {photographers.length}
+          - Photographs: {photographyWorks.length}
         */}
       </section>
 
       {/* Section 3: Key Photographers */}
       <section data-section="photographers">
         {/*
-          Data: {photographersResult.data}
+          Data: {photographers}
           Display: Grid of photographer cards
           Links:
           - Each photographer → /artists/[slug]
@@ -84,7 +91,7 @@ export default async function PhotographyPage() {
       {/* Section 5: Iconic Photographs */}
       <section data-section="iconic-works">
         {/*
-          Data: {iconicPhotos.data}
+          Data: {photographyWorks}
           Display: Featured iconic images with cultural context
           Links:
           - Each photo → /works/[slug]
@@ -110,7 +117,7 @@ export default async function PhotographyPage() {
       {/* Section 7: Related Movements */}
       <section data-section="movements">
         {/*
-          Data: {movements.data} filtered for photography relevance
+          Data: {movements} filtered for photography relevance
           Links: Each movement → /movements/[slug]
         */}
       </section>

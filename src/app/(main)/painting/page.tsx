@@ -4,9 +4,13 @@
 // =============================================================================
 
 import type { Metadata } from 'next';
-import { getArtistsByMedium, getArtistCount } from '@/lib/queries';
-import { getIconicWorks, getArtworkCount } from '@/lib/queries';
-import { getMovements } from '@/lib/queries';
+import {
+  getArtistsByMedium,
+  getIconicWorks,
+  getMovements,
+  countArtists,
+  countArtworks,
+} from '@/lib/queries';
 
 export const metadata: Metadata = {
   title: 'Moroccan Painting | Morocco Art Archive',
@@ -24,18 +28,21 @@ export const metadata: Metadata = {
 export default async function PaintingPage() {
   // Fetch data in parallel
   const [
-    paintersResult,
+    painters,
     notablePaintings,
-    painterCount,
-    paintingCount,
     movements,
+    totalArtists,
+    totalArtworks,
   ] = await Promise.all([
-    getArtistsByMedium('PAINTING', { limit: 24 }),
-    getIconicWorks({ medium: 'PAINTING' as any, limit: 6 }),
-    getArtistCount({ medium: 'PAINTING' as any }),
-    getArtworkCount({ medium: 'PAINTING' as any }),
-    getMovements({ limit: 10 }),
+    getArtistsByMedium('PAINTING'),
+    getIconicWorks(),
+    getMovements(),
+    countArtists(),
+    countArtworks(),
   ]);
+
+  // Filter for painting
+  const paintingWorks = notablePaintings.filter(w => w.medium === 'PAINTING');
 
   return (
     <div>
@@ -54,15 +61,15 @@ export default async function PaintingPage() {
       <section data-section="statistics">
         {/*
           Data:
-          - Painters: {painterCount}
-          - Paintings: {paintingCount}
+          - Painters: {painters.length}
+          - Paintings: {paintingWorks.length}
         */}
       </section>
 
       {/* Section 3: Key Painters */}
       <section data-section="painters">
         {/*
-          Data: {paintersResult.data}
+          Data: {painters}
           Display: Grid of painter cards
           Links:
           - Each painter → /artists/[slug]
@@ -86,7 +93,7 @@ export default async function PaintingPage() {
       {/* Section 5: Notable Paintings */}
       <section data-section="notable-works">
         {/*
-          Data: {notablePaintings.data}
+          Data: {paintingWorks}
           Display: Featured notable paintings
           Links:
           - Each painting → /works/[slug]
@@ -112,7 +119,7 @@ export default async function PaintingPage() {
       {/* Section 7: Movements */}
       <section data-section="movements">
         {/*
-          Data: {movements.data} filtered for painting relevance
+          Data: {movements} filtered for painting relevance
           Key movements:
           - Casablanca School
           - Presence Plastique

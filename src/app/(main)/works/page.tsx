@@ -6,44 +6,17 @@
 import type { Metadata } from 'next';
 import { generateListMetadata } from '@/lib/seo';
 import { getArtworks, getArtworkFacets, getArtworkCount } from '@/lib/queries';
-import { parseURLParams } from '@/lib/search';
-import type { URLQueryParams } from '@/lib/search';
 
 export const metadata: Metadata = generateListMetadata('works');
-
-// =============================================================================
-// PAGE PROPS
-// =============================================================================
-
-interface WorksPageProps {
-  searchParams: Promise<URLQueryParams>;
-}
 
 // =============================================================================
 // PAGE COMPONENT
 // =============================================================================
 
-export default async function WorksPage({ searchParams }: WorksPageProps) {
-  const params = await searchParams;
-  const query = parseURLParams(params);
-
+export default async function WorksPage() {
   // Fetch data in parallel
-  const [artworksResult, facets, totalCount] = await Promise.all([
-    getArtworks({
-      q: query.keyword,
-      medium: query.medium?.[0],
-      periodStart: query.periodStart,
-      periodEnd: query.periodEnd,
-      city: query.cityIds?.[0],
-      theme: query.themeIds?.[0],
-      movement: query.movementIds?.[0],
-      artist: query.artistIds?.[0],
-      iconic: query.iconicOnly,
-      page: query.page,
-      limit: query.limit,
-      sort: query.sort as any,
-      order: query.order,
-    }),
+  const [artworks, facets, totalCount] = await Promise.all([
+    getArtworks(),
     getArtworkFacets(),
     getArtworkCount(),
   ]);
@@ -108,7 +81,7 @@ export default async function WorksPage({ searchParams }: WorksPageProps) {
       {/* Section 6: Results Grid */}
       <section data-section="results">
         {/*
-          Data: {artworksResult.data}
+          Data: {artworks}
           Display: Grid of artwork cards
           Each card links to: /works/[slug]
 
@@ -124,7 +97,7 @@ export default async function WorksPage({ searchParams }: WorksPageProps) {
       {/* Section 7: Pagination */}
       <section data-section="pagination">
         {/*
-          Data: {artworksResult.pagination}
+          Client-side pagination of {artworks}
         */}
       </section>
     </div>

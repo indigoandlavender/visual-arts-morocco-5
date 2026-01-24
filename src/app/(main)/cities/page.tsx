@@ -14,8 +14,8 @@ export const metadata: Metadata = generateListMetadata('cities');
 // =============================================================================
 
 export default async function CitiesPage() {
-  const [citiesResult, regions, cityFacets] = await Promise.all([
-    getCities({ limit: 100 }),
+  const [cities, regions, cityFacets] = await Promise.all([
+    getCities(),
     getRegions(),
     getCityFacets(),
   ]);
@@ -80,7 +80,7 @@ export default async function CitiesPage() {
       {/* Section 5: All Cities List */}
       <section data-section="all-cities">
         {/*
-          Data: {citiesResult.data}
+          Data: {cities}
           Display: Alphabetical list or grid
           Shows: City name, region, count
 
