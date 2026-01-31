@@ -15,6 +15,10 @@ export async function getSheetsClient() {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
     const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
     const credentials = JSON.parse(decoded);
+    // Fix private key newlines (may be escaped as \\n)
+    if (credentials.private_key) {
+      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    }
     auth = new google.auth.GoogleAuth({
       credentials,
       scopes: SCOPES,
@@ -23,6 +27,10 @@ export async function getSheetsClient() {
   // Check for raw JSON credentials
   else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    // Fix private key newlines (may be escaped as \\n)
+    if (credentials.private_key) {
+      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    }
     auth = new google.auth.GoogleAuth({
       credentials,
       scopes: SCOPES,
