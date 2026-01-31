@@ -36,7 +36,7 @@ export function Footer() {
             { label: 'Disclaimer', href: '/disclaimer' },
           ],
           poweredBy: { name: 'Slow Morocco', url: 'https://slowmorocco.com' },
-          copyright: { year: new Date().getFullYear(), name: 'Morocco Art Archive' },
+          copyright: { year: new Date().getFullYear(), name: 'Slow Morocco' },
         });
       });
   }, []);
@@ -50,11 +50,11 @@ export function Footer() {
             {/* Brand */}
             <div className="md:col-span-4">
               <span className="text-[11px] tracking-[0.4em] uppercase font-medium block mb-6">
-                Morocco Art Archive
+                Slow Morocco
               </span>
               <p className="text-white/40 text-sm leading-relaxed max-w-xs">
-                A living record of Moroccan visual art from the 20th century to today.
-                Painting and photography.
+                A living archive of visual arts in Morocco—from prehistoric rock art 
+                to contemporary practice. Moroccan masters and international artists who found inspiration here.
               </p>
             </div>
 

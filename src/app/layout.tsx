@@ -19,8 +19,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Morocco Art Archive",
-  description: "A comprehensive archive of Moroccan visual art - painting and photography",
+  title: "Morocco Art Archive | Slow Morocco",
+  description: "A living archive of visual arts in Morocco—from prehistoric rock art to contemporary practice. Moroccan masters and international artists who found inspiration here.",
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -43,8 +47,9 @@ export default function RootLayout({
         <nav className="fixed top-0 left-0 right-0 z-50 mix-blend-difference">
           <div className="flex justify-between items-center px-6 md:px-12 py-6">
             {/* Logo */}
-            <Link href="/" className="text-white">
-              <span className="text-[11px] tracking-[0.4em] uppercase font-medium">
+            <Link href="/" className="text-white flex items-center gap-3">
+              <span className="w-8 h-8 bg-white/10 flex items-center justify-center text-[10px] tracking-wide font-serif">MA</span>
+              <span className="text-[11px] tracking-[0.4em] uppercase font-medium hidden sm:inline">
                 Morocco Art Archive
               </span>
             </Link>
