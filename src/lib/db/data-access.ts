@@ -5,11 +5,13 @@ import type {
   Movement,
   Theme,
   City,
+  Institution,
   Medium,
   ContentStatus,
   ThemeCategory,
   CityRelationType,
   ArtistRelationType,
+  InstitutionType,
 } from '@/types';
 
 // Row types from sheets (flat structure)
@@ -125,6 +127,28 @@ interface IconicImageRow {
   interpretation: string | null;
 }
 
+interface InstitutionRow {
+  id: string;
+  slug: string;
+  name: string;
+  nameAr: string | null;
+  type: string;
+  cityId: string;
+  address: string | null;
+  description: string | null;
+  descriptionLong: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  hours: string | null;
+  admission: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  yearEstablished: number | null;
+  highlights: string | null;
+  status: string;
+}
+
 // Cache for data (refreshed on each request in dev, cached in production)
 let cache: {
   artists?: ArtistRow[];
@@ -132,6 +156,7 @@ let cache: {
   movements?: MovementRow[];
   themes?: ThemeRow[];
   cities?: CityRow[];
+  institutions?: InstitutionRow[];
   artistCities?: ArtistCityRow[];
   artistThemes?: ArtistThemeRow[];
   artistMovements?: ArtistMovementRow[];
@@ -157,6 +182,7 @@ async function getCache() {
     movements,
     themes,
     cities,
+    institutions,
     artistCities,
     artistThemes,
     artistMovements,
@@ -170,6 +196,7 @@ async function getCache() {
     readSheet<MovementRow>(SHEETS.MOVEMENTS),
     readSheet<ThemeRow>(SHEETS.THEMES),
     readSheet<CityRow>(SHEETS.CITIES),
+    readSheet<InstitutionRow>(SHEETS.INSTITUTIONS),
     readSheet<ArtistCityRow>(SHEETS.ARTIST_CITIES),
     readSheet<ArtistThemeRow>(SHEETS.ARTIST_THEMES),
     readSheet<ArtistMovementRow>(SHEETS.ARTIST_MOVEMENTS),
@@ -185,6 +212,7 @@ async function getCache() {
     movements,
     themes,
     cities,
+    institutions,
     artistCities,
     artistThemes,
     artistMovements,
@@ -331,6 +359,35 @@ function buildCity(row: CityRow): City {
     description: row.description,
     latitude: row.latitude,
     longitude: row.longitude,
+  };
+}
+
+function buildInstitution(
+  row: InstitutionRow,
+  data: Awaited<ReturnType<typeof getCache>>
+): Institution {
+  const cityRow = data.cities?.find(c => c.id === row.cityId);
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    nameArabic: row.nameAr,
+    type: row.type as InstitutionType,
+    cityId: row.cityId,
+    city: cityRow ? buildCity(cityRow) : undefined,
+    address: row.address,
+    description: row.description,
+    descriptionLong: row.descriptionLong,
+    website: row.website,
+    phone: row.phone,
+    email: row.email,
+    hours: row.hours,
+    admission: row.admission,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    yearEstablished: row.yearEstablished,
+    highlights: row.highlights,
+    status: row.status as ContentStatus,
   };
 }
 
@@ -483,6 +540,54 @@ export async function getArtworksByCity(cityId: string): Promise<Artwork[]> {
   return (data.artworks || [])
     .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
     .map(a => buildArtwork(a, data));
+}
+
+// Institution functions
+export async function getAllInstitutions(): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
+  const data = await getCache();
+  const row = data.institutions?.find(i => i.slug === slug);
+  if (!row) return null;
+  return buildInstitution(row, data);
+}
+
+export async function getInstitutionsByCity(cityId: string): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.cityId === cityId && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByCitySlug(citySlug: string): Promise<Institution[]> {
+  const data = await getCache();
+  const city = data.cities?.find(c => c.slug === citySlug);
+  if (!city) return [];
+  return (data.institutions || [])
+    .filter(i => i.cityId === city.id && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByType(type: InstitutionType): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.type === type && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function countInstitutions(): Promise<number> {
+  const data = await getCache();
+  return (data.institutions || []).filter(i => i.status === 'PUBLISHED').length;
+}
+
+export async function countInstitutionsByCity(cityId: string): Promise<number> {
+  const data = await getCache();
+  return (data.institutions || []).filter(i => i.cityId === cityId && i.status === 'PUBLISHED').length;
 }
 
 export async function getRelatedArtists(artistId: string): Promise<Artist[]> {

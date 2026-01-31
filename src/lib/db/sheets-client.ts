@@ -47,6 +47,7 @@ export const SHEETS = {
   MOVEMENTS: 'Movements',
   THEMES: 'Themes',
   CITIES: 'Cities',
+  INSTITUTIONS: 'Institutions',
   ARTIST_CITIES: 'ArtistCities',
   ARTIST_THEMES: 'ArtistThemes',
   ARTIST_MOVEMENTS: 'ArtistMovements',

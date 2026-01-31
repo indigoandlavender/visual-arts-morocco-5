@@ -40,6 +40,15 @@ import {
   getCityBySlug,
   countCities,
 
+  // Institutions
+  getAllInstitutions,
+  getInstitutionBySlug,
+  getInstitutionsByCity,
+  getInstitutionsByCitySlug,
+  getInstitutionsByType,
+  countInstitutions,
+  countInstitutionsByCity,
+
   // Search
   searchAll,
 } from '../db/data-access';
@@ -84,6 +93,15 @@ export {
   getAllCities,
   getCityBySlug,
   countCities,
+
+  // Institutions - original exports
+  getAllInstitutions,
+  getInstitutionBySlug,
+  getInstitutionsByCity,
+  getInstitutionsByCitySlug,
+  getInstitutionsByType,
+  countInstitutions,
+  countInstitutionsByCity,
 
   // Search
   searchAll,
@@ -137,6 +155,10 @@ export const getCitiesByRegion = async (region: string) => {
   return cities.filter(c => c.region === region);
 };
 export const getCityFacets = async () => ({ cities: await getAllCities() });
+
+// Institutions aliases
+export const getInstitutions = getAllInstitutions;
+export const getInstitutionCount = countInstitutions;
 
 // =============================================================================
 // Facet functions (return filter options for UI)

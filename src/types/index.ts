@@ -14,6 +14,7 @@ export type UserTier = 'FREE' | 'PREMIUM' | 'INSTITUTIONAL';
 export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPT' | 'CONCEPTUAL';
 export type CityRelationType = 'BORN' | 'BASED' | 'WORKED' | 'DEPICTED' | 'CREATED';
 export type ArtistRelationType = 'CONTEMPORARY' | 'INFLUENCED_BY' | 'TEACHER_STUDENT' | 'COLLABORATED';
+export type InstitutionType = 'MUSEUM' | 'GALLERY' | 'CULTURAL_CENTER' | 'ART_SCHOOL' | 'FOUNDATION' | 'RESIDENCY';
 
 // =============================================================================
 // CORE ENTITY TYPES
@@ -94,6 +95,29 @@ export interface City {
   description?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+}
+
+export interface Institution {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  type: InstitutionType;
+  cityId: string;
+  city?: City;
+  address?: string | null;
+  description?: string | null;
+  descriptionLong?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  hours?: string | null;
+  admission?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  yearEstablished?: number | null;
+  highlights?: string | null;
+  status: ContentStatus;
 }
 
 export interface IconicImage {
