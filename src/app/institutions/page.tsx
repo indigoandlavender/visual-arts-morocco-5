@@ -17,11 +17,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Art Institutions in Morocco | Museums, Galleries & Cultural Centers',
-  description: 'Explore museums, art galleries, cultural foundations, art schools, and artist residencies across Morocco. From MACAAL in Marrakech to the Mohammed VI Museum in Rabat.',
-  openGraph: {
-    title: 'Art Institutions in Morocco',
-    description: 'Discover museums, galleries, and cultural centers dedicated to visual arts across Morocco.',
-  },
+  description: 'Explore museums, art galleries, cultural foundations, art schools, and artist residencies across Morocco.',
 };
 
 // =============================================================================
@@ -81,8 +77,6 @@ export default async function InstitutionsPage() {
 
   const byCity = groupByCity(institutions);
   const byType = groupByType(institutions);
-
-  // Sort cities by institution count
   const sortedCities = Array.from(byCity.entries()).sort((a, b) => b[1].length - a[1].length);
 
   return (
@@ -96,15 +90,12 @@ export default async function InstitutionsPage() {
             <span className="text-white">Institutions</span>
           </nav>
           
-          <h1 className="text-4xl md:text-5xl font-light mb-4">
-            Art Institutions
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-light mb-4">Art Institutions</h1>
           <p className="text-xl text-stone-300 max-w-2xl">
             Museums, galleries, cultural foundations, art schools, and artist residencies 
             dedicated to visual arts across Morocco.
           </p>
           
-          {/* Stats */}
           <div className="flex gap-8 mt-10 pt-10 border-t border-stone-700">
             <div>
               <div className="text-3xl font-light">{institutions.length}</div>
@@ -127,11 +118,7 @@ export default async function InstitutionsPage() {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex flex-wrap gap-3">
             {Array.from(byType.entries()).map(([type, insts]) => (
-              <a
-                key={type}
-                href={`#${type.toLowerCase()}`}
-                className="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-sm transition-colors"
-              >
+              <a key={type} href={`#${type.toLowerCase()}`} className="px-4 py-2 rounded-full bg-stone-100 hover:bg-stone-200 text-sm transition-colors">
                 {INSTITUTION_TYPE_ICONS[type]} {INSTITUTION_TYPE_LABELS[type]} 
                 <span className="text-stone-500 ml-1">({insts.length})</span>
               </a>
@@ -144,17 +131,13 @@ export default async function InstitutionsPage() {
       <section className="max-w-6xl mx-auto px-6 py-16">
         {sortedCities.map(([cityName, cityInstitutions]) => {
           const citySlug = cities.find(c => c.name === cityName)?.slug;
-          
           return (
             <div key={cityName} className="mb-16">
               <div className="flex items-baseline gap-4 mb-6">
                 <h2 className="text-2xl font-light">{cityName}</h2>
                 <span className="text-stone-500">{cityInstitutions.length} institutions</span>
                 {citySlug && (
-                  <Link 
-                    href={`/cities/${citySlug}`}
-                    className="text-sm text-amber-700 hover:text-amber-800"
-                  >
+                  <Link href={`/cities/${citySlug}`} className="text-sm text-amber-700 hover:text-amber-800">
                     View city →
                   </Link>
                 )}
@@ -162,11 +145,7 @@ export default async function InstitutionsPage() {
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {cityInstitutions.map((inst) => (
-                  <article 
-                    key={inst.id}
-                    id={inst.type.toLowerCase()}
-                    className="bg-white rounded-lg border border-stone-200 p-6 hover:shadow-lg transition-shadow"
-                  >
+                  <article key={inst.id} id={inst.type.toLowerCase()} className="bg-white rounded-lg border border-stone-200 p-6 hover:shadow-lg transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-2xl">{INSTITUTION_TYPE_ICONS[inst.type]}</span>
                       <span className="text-xs px-2 py-1 bg-stone-100 rounded-full text-stone-600">
@@ -177,9 +156,7 @@ export default async function InstitutionsPage() {
                     <h3 className="text-lg font-medium mb-2">{inst.name}</h3>
                     
                     {inst.description && (
-                      <p className="text-sm text-stone-600 mb-4 line-clamp-3">
-                        {inst.description}
-                      </p>
+                      <p className="text-sm text-stone-600 mb-4 line-clamp-3">{inst.description}</p>
                     )}
                     
                     <div className="space-y-2 text-sm text-stone-500">
@@ -189,14 +166,12 @@ export default async function InstitutionsPage() {
                           <span className="line-clamp-2">{inst.address}</span>
                         </div>
                       )}
-                      
                       {inst.hours && (
                         <div className="flex items-start gap-2">
                           <span>🕒</span>
                           <span>{inst.hours}</span>
                         </div>
                       )}
-                      
                       {inst.admission && (
                         <div className="flex items-start gap-2">
                           <span>🎟️</span>
@@ -206,12 +181,7 @@ export default async function InstitutionsPage() {
                     </div>
                     
                     {inst.website && (
-                      <a
-                        href={inst.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block mt-4 text-sm text-amber-700 hover:text-amber-800"
-                      >
+                      <a href={inst.website} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-sm text-amber-700 hover:text-amber-800">
                         Visit website →
                       </a>
                     )}
@@ -220,10 +190,7 @@ export default async function InstitutionsPage() {
                       <div className="mt-4 pt-4 border-t border-stone-100">
                         <div className="flex flex-wrap gap-1">
                           {inst.highlights.split(';').map((highlight, i) => (
-                            <span 
-                              key={i}
-                              className="text-xs px-2 py-1 bg-amber-50 text-amber-800 rounded"
-                            >
+                            <span key={i} className="text-xs px-2 py-1 bg-amber-50 text-amber-800 rounded">
                               {highlight.trim()}
                             </span>
                           ))}
@@ -237,44 +204,6 @@ export default async function InstitutionsPage() {
           );
         })}
       </section>
-
-      {/* JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'ItemList',
-            name: 'Art Institutions in Morocco',
-            description: 'Museums, galleries, and cultural centers dedicated to visual arts in Morocco',
-            numberOfItems: institutions.length,
-            itemListElement: institutions.map((inst, index) => ({
-              '@type': 'ListItem',
-              position: index + 1,
-              item: {
-                '@type': inst.type === 'MUSEUM' ? 'Museum' : 
-                        inst.type === 'GALLERY' ? 'ArtGallery' :
-                        inst.type === 'ART_SCHOOL' ? 'EducationalOrganization' :
-                        'Organization',
-                name: inst.name,
-                description: inst.description,
-                address: inst.address ? {
-                  '@type': 'PostalAddress',
-                  streetAddress: inst.address,
-                  addressLocality: inst.city?.name,
-                  addressCountry: 'MA',
-                } : undefined,
-                url: inst.website,
-                geo: inst.latitude && inst.longitude ? {
-                  '@type': 'GeoCoordinates',
-                  latitude: inst.latitude,
-                  longitude: inst.longitude,
-                } : undefined,
-              },
-            })),
-          }),
-        }}
-      />
     </main>
   );
 }

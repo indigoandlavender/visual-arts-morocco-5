@@ -11,8 +11,17 @@ export async function getSheetsClient() {
 
   let auth;
 
-  // Check for credentials in environment variable (Vercel)
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+  // Check for base64 encoded credentials (Slow Morocco pattern)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
+    const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+    const credentials = JSON.parse(decoded);
+    auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: SCOPES,
+    });
+  }
+  // Check for raw JSON credentials
+  else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
     auth = new google.auth.GoogleAuth({
       credentials,
@@ -28,7 +37,7 @@ export async function getSheetsClient() {
         scopes: SCOPES,
       });
     } else {
-      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY env var or add credentials file.');
+      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_BASE64 or GOOGLE_SERVICE_ACCOUNT_KEY env var.');
     }
   }
 

@@ -175,53 +175,75 @@ async function getCache() {
     return cache;
   }
 
-  // Refresh cache
-  const [
-    artists,
-    artworks,
-    movements,
-    themes,
-    cities,
-    institutions,
-    artistCities,
-    artistThemes,
-    artistMovements,
-    artistRelations,
-    artworkThemes,
-    artworkCities,
-    iconicImages,
-  ] = await Promise.all([
-    readSheet<ArtistRow>(SHEETS.ARTISTS),
-    readSheet<ArtworkRow>(SHEETS.ARTWORKS),
-    readSheet<MovementRow>(SHEETS.MOVEMENTS),
-    readSheet<ThemeRow>(SHEETS.THEMES),
-    readSheet<CityRow>(SHEETS.CITIES),
-    readSheet<InstitutionRow>(SHEETS.INSTITUTIONS),
-    readSheet<ArtistCityRow>(SHEETS.ARTIST_CITIES),
-    readSheet<ArtistThemeRow>(SHEETS.ARTIST_THEMES),
-    readSheet<ArtistMovementRow>(SHEETS.ARTIST_MOVEMENTS),
-    readSheet<ArtistRelationRow>(SHEETS.ARTIST_RELATIONS),
-    readSheet<ArtworkThemeRow>(SHEETS.ARTWORK_THEMES),
-    readSheet<ArtworkCityRow>(SHEETS.ARTWORK_CITIES),
-    readSheet<IconicImageRow>(SHEETS.ICONIC_IMAGES),
-  ]);
+  try {
+    // Refresh cache
+    const [
+      artists,
+      artworks,
+      movements,
+      themes,
+      cities,
+      institutions,
+      artistCities,
+      artistThemes,
+      artistMovements,
+      artistRelations,
+      artworkThemes,
+      artworkCities,
+      iconicImages,
+    ] = await Promise.all([
+      readSheet<ArtistRow>(SHEETS.ARTISTS),
+      readSheet<ArtworkRow>(SHEETS.ARTWORKS),
+      readSheet<MovementRow>(SHEETS.MOVEMENTS),
+      readSheet<ThemeRow>(SHEETS.THEMES),
+      readSheet<CityRow>(SHEETS.CITIES),
+      readSheet<InstitutionRow>(SHEETS.INSTITUTIONS),
+      readSheet<ArtistCityRow>(SHEETS.ARTIST_CITIES),
+      readSheet<ArtistThemeRow>(SHEETS.ARTIST_THEMES),
+      readSheet<ArtistMovementRow>(SHEETS.ARTIST_MOVEMENTS),
+      readSheet<ArtistRelationRow>(SHEETS.ARTIST_RELATIONS),
+      readSheet<ArtworkThemeRow>(SHEETS.ARTWORK_THEMES),
+      readSheet<ArtworkCityRow>(SHEETS.ARTWORK_CITIES),
+      readSheet<IconicImageRow>(SHEETS.ICONIC_IMAGES),
+    ]);
 
-  cache = {
-    artists,
-    artworks,
-    movements,
-    themes,
-    cities,
-    institutions,
-    artistCities,
-    artistThemes,
-    artistMovements,
-    artistRelations,
-    artworkThemes,
-    artworkCities,
-    iconicImages,
-    timestamp: now,
-  };
+    cache = {
+      artists,
+      artworks,
+      movements,
+      themes,
+      cities,
+      institutions,
+      artistCities,
+      artistThemes,
+      artistMovements,
+      artistRelations,
+      artworkThemes,
+      artworkCities,
+      iconicImages,
+      timestamp: now,
+    };
+  } catch (error) {
+    console.error('Error fetching data from Google Sheets:', error);
+    // Return empty cache if not initialized
+    if (!cache.timestamp) {
+      cache = {
+        artists: [],
+        artworks: [],
+        movements: [],
+        themes: [],
+        cities: [],
+        artistCities: [],
+        artistThemes: [],
+        artistMovements: [],
+        artistRelations: [],
+        artworkThemes: [],
+        artworkCities: [],
+        iconicImages: [],
+        timestamp: now,
+      };
+    }
+  }
 
   return cache;
 }
@@ -542,54 +564,6 @@ export async function getArtworksByCity(cityId: string): Promise<Artwork[]> {
     .map(a => buildArtwork(a, data));
 }
 
-// Institution functions
-export async function getAllInstitutions(): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
-  const data = await getCache();
-  const row = data.institutions?.find(i => i.slug === slug);
-  if (!row) return null;
-  return buildInstitution(row, data);
-}
-
-export async function getInstitutionsByCity(cityId: string): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.cityId === cityId && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionsByCitySlug(citySlug: string): Promise<Institution[]> {
-  const data = await getCache();
-  const city = data.cities?.find(c => c.slug === citySlug);
-  if (!city) return [];
-  return (data.institutions || [])
-    .filter(i => i.cityId === city.id && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionsByType(type: InstitutionType): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.type === type && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function countInstitutions(): Promise<number> {
-  const data = await getCache();
-  return (data.institutions || []).filter(i => i.status === 'PUBLISHED').length;
-}
-
-export async function countInstitutionsByCity(cityId: string): Promise<number> {
-  const data = await getCache();
-  return (data.institutions || []).filter(i => i.cityId === cityId && i.status === 'PUBLISHED').length;
-}
-
 export async function getRelatedArtists(artistId: string): Promise<Artist[]> {
   const data = await getCache();
   const relatedIds = (data.artistRelations || [])
@@ -652,4 +626,52 @@ export async function countThemes(): Promise<number> {
 export async function countCities(): Promise<number> {
   const data = await getCache();
   return (data.cities || []).length;
+}
+
+// Institution functions
+export async function getAllInstitutions(): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
+  const data = await getCache();
+  const row = data.institutions?.find(i => i.slug === slug);
+  if (!row) return null;
+  return buildInstitution(row, data);
+}
+
+export async function getInstitutionsByCity(cityId: string): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.cityId === cityId && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByCitySlug(citySlug: string): Promise<Institution[]> {
+  const data = await getCache();
+  const city = data.cities?.find(c => c.slug === citySlug);
+  if (!city) return [];
+  return (data.institutions || [])
+    .filter(i => i.cityId === city.id && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByType(type: InstitutionType): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.type === type && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function countInstitutions(): Promise<number> {
+  const data = await getCache();
+  return (data.institutions || []).filter(i => i.status === 'PUBLISHED').length;
+}
+
+export async function countInstitutionsByCity(cityId: string): Promise<number> {
+  const data = await getCache();
+  return (data.institutions || []).filter(i => i.cityId === cityId && i.status === 'PUBLISHED').length;
 }
