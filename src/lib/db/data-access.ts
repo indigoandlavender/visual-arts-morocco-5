@@ -206,12 +206,31 @@ let cache: {
 
 const CACHE_TTL = process.env.NODE_ENV === 'production' ? 60000 : 5000;
 
+// Lock to prevent concurrent cache refreshes
+let cacheRefreshPromise: Promise<typeof cache> | null = null;
+
 async function getCache() {
   const now = Date.now();
   if (cache.timestamp && now - cache.timestamp < CACHE_TTL) {
     return cache;
   }
 
+  // If another request is already refreshing the cache, wait for it
+  if (cacheRefreshPromise) {
+    return cacheRefreshPromise;
+  }
+
+  // Start cache refresh and store the promise
+  cacheRefreshPromise = refreshCache(now);
+
+  try {
+    return await cacheRefreshPromise;
+  } finally {
+    cacheRefreshPromise = null;
+  }
+}
+
+async function refreshCache(now: number) {
   try {
     const [
       objectTypes,
