@@ -6,18 +6,65 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
+// Fix private key that may have been corrupted during encoding/copying
+function fixPrivateKey(key: string): string {
+  if (!key) return key;
+
+  let fixed = key;
+
+  // Remove carriage returns
+  fixed = fixed.replace(/\r/g, '');
+
+  // Handle multiple levels of escaping: \\\\n -> \\n -> \n
+  while (fixed.includes('\\\\n')) {
+    fixed = fixed.replace(/\\\\n/g, '\\n');
+  }
+
+  // Replace literal \n strings with actual newlines
+  fixed = fixed.replace(/\\n/g, '\n');
+
+  // Ensure proper PEM format
+  if (!fixed.includes('\n') && fixed.includes('-----BEGIN')) {
+    // Key has no newlines at all - try to reconstruct
+    fixed = fixed
+      .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
+      .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n');
+  }
+
+  return fixed;
+}
+
+// Parse credentials from string, handling double-stringified JSON
+function parseCredentials(str: string): Record<string, unknown> {
+  let parsed = str;
+
+  // Handle double-stringified JSON (when JSON.stringify was called twice)
+  while (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      break;
+    }
+  }
+
+  if (typeof parsed === 'string') {
+    throw new Error('Failed to parse credentials JSON');
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
 export async function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
   let auth;
 
-  // Check for base64 encoded credentials (Slow Morocco pattern)
+  // Check for base64 encoded credentials
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
     const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
-    const credentials = JSON.parse(decoded);
-    // Fix private key newlines (may be escaped as \\n)
-    if (credentials.private_key) {
-      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    const credentials = parseCredentials(decoded);
+    if (credentials.private_key && typeof credentials.private_key === 'string') {
+      credentials.private_key = fixPrivateKey(credentials.private_key);
     }
     auth = new google.auth.GoogleAuth({
       credentials,
@@ -26,10 +73,9 @@ export async function getSheetsClient() {
   }
   // Check for raw JSON credentials
   else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
-    // Fix private key newlines (may be escaped as \\n)
-    if (credentials.private_key) {
-      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    const credentials = parseCredentials(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    if (credentials.private_key && typeof credentials.private_key === 'string') {
+      credentials.private_key = fixPrivateKey(credentials.private_key);
     }
     auth = new google.auth.GoogleAuth({
       credentials,
