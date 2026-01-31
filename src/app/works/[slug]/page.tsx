@@ -74,9 +74,10 @@ export default async function ArtworkPage({ params }: PageProps) {
             - Title: {artwork.title}
             - Title Arabic: {artwork.titleArabic}
             - Artist: {artwork.artist.name} → Link to /artists/[slug]
-            - Year: {artwork.year} (approximate: {artwork.yearApproximate})
-            - Medium: {artwork.medium}
-            - Technique: {artwork.technique}
+            - Year: {artwork.year}
+            - Object Type: {artwork.objectType?.name}
+            - Genre: {artwork.genre?.name}
+            - Materials: {artwork.materials}
           */}
         </header>
 
@@ -139,6 +140,14 @@ export default async function ArtworkPage({ params }: PageProps) {
           {/*
             Data: {artwork.themes}
             Links: Each theme → /themes/[slug]
+          */}
+        </section>
+
+        {/* Section 8b: Subject Terms */}
+        <section data-section="subjects">
+          {/*
+            Data: {artwork.subjects}
+            Links: Each subject → /subjects/[slug]
           */}
         </section>
 

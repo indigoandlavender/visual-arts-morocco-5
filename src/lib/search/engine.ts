@@ -29,7 +29,7 @@ export async function executeSearch(query: SearchQuery): Promise<SearchResultSet
     id: artist.id,
     slug: artist.slug,
     title: artist.name,
-    subtitle: artist.medium || '',
+    subtitle: artist.primaryObjectType?.name || '',
     score: query.keyword ? calculateRelevanceScore(artist.name, query.keyword) : undefined,
   }));
 
@@ -110,7 +110,7 @@ export async function getAutocompleteSuggestions(
       id: a.id,
       slug: a.slug,
       text: a.name,
-      subtitle: a.medium || undefined,
+      subtitle: a.primaryObjectType?.name || undefined,
     });
   });
 

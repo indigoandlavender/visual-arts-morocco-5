@@ -12,7 +12,7 @@ interface ArtistForJsonLd {
   biographyShort?: string | null;
   birthYear?: number | null;
   deathYear?: number | null;
-  medium: string;
+  primaryObjectType?: { name: string; slug: string } | null;
   themes?: { name: string }[];
 }
 
@@ -21,12 +21,15 @@ interface ArtworkForJsonLd {
   title: string;
   description?: string | null;
   year?: number | null;
-  medium: string;
+  objectType?: { name: string; slug: string } | null;
+  genre?: { name: string; slug: string } | null;
+  materials?: string | null;
   dimensions?: string | null;
   imageUrl?: string | null;
   artist?: { name: string; slug: string };
   movement?: { name: string; slug: string } | null;
   themes?: { name: string }[];
+  subjects?: { name: string }[];
 }
 
 interface MovementForJsonLd {
@@ -69,12 +72,17 @@ export function generateArtistJsonLd(artist: ArtistForJsonLd): object {
     jsonLd.deathDate = String(artist.deathYear);
   }
 
-  const jobTitles: Record<string, string[]> = {
-    PHOTOGRAPHY: ['Photographer'],
-    PAINTING: ['Painter', 'Visual Artist'],
-    BOTH: ['Photographer', 'Painter', 'Visual Artist'],
-  };
-  jsonLd.jobTitle = jobTitles[artist.medium] || ['Visual Artist'];
+  // Get job title from object type
+  const objectTypeName = artist.primaryObjectType?.name?.toLowerCase() || '';
+  let jobTitles = ['Visual Artist'];
+  if (objectTypeName.includes('photograph')) {
+    jobTitles = ['Photographer'];
+  } else if (objectTypeName.includes('paint')) {
+    jobTitles = ['Painter', 'Visual Artist'];
+  } else if (objectTypeName.includes('sculpt')) {
+    jobTitles = ['Sculptor'];
+  }
+  jsonLd.jobTitle = jobTitles;
 
   if (artist.themes && artist.themes.length > 0) {
     jsonLd.knowsAbout = artist.themes.map((theme) => theme.name);
@@ -109,11 +117,19 @@ export function generateArtworkJsonLd(artwork: ArtworkForJsonLd): object {
     jsonLd.dateCreated = String(artwork.year);
   }
 
-  const artForms: Record<string, string> = {
-    PHOTOGRAPHY: 'photograph',
-    PAINTING: 'painting',
-  };
-  jsonLd.artform = artForms[artwork.medium] || artwork.medium.toLowerCase();
+  // Set artform from object type
+  const objectTypeName = artwork.objectType?.name?.toLowerCase() || '';
+  jsonLd.artform = objectTypeName || 'visual artwork';
+
+  // Add genre
+  if (artwork.genre) {
+    jsonLd.genre = artwork.genre.name;
+  }
+
+  // Add materials/medium
+  if (artwork.materials) {
+    jsonLd.artMedium = artwork.materials;
+  }
 
   if (artwork.dimensions) {
     jsonLd.size = artwork.dimensions;
@@ -136,7 +152,9 @@ export function generateArtworkJsonLd(artwork: ArtworkForJsonLd): object {
   }
 
   if (artwork.themes && artwork.themes.length > 0) {
-    jsonLd.keywords = artwork.themes.map((t) => t.name).join(', ');
+    const themeNames = artwork.themes.map((t) => t.name);
+    const subjectNames = artwork.subjects?.map((s) => s.name) || [];
+    jsonLd.keywords = [...themeNames, ...subjectNames].join(', ');
   }
 
   return jsonLd;

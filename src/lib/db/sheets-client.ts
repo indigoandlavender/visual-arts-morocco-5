@@ -51,17 +51,24 @@ export function getSheetId() {
 
 // Sheet names matching our data model
 export const SHEETS = {
-  ARTISTS: 'Artists',
-  ARTWORKS: 'Artworks',
+  // Lookup/Taxonomy tables
+  OBJECT_TYPES: 'ObjectTypes',
+  GENRES: 'Genres',
   MOVEMENTS: 'Movements',
   THEMES: 'Themes',
+  SUBJECT_TERMS: 'SubjectTerms',
   CITIES: 'Cities',
   INSTITUTIONS: 'Institutions',
+  // Entity tables
+  ARTISTS: 'Artists',
+  ARTWORKS: 'Artworks',
+  // Junction tables
   ARTIST_CITIES: 'ArtistCities',
   ARTIST_THEMES: 'ArtistThemes',
   ARTIST_MOVEMENTS: 'ArtistMovements',
   ARTIST_RELATIONS: 'ArtistRelations',
   ARTWORK_THEMES: 'ArtworkThemes',
+  ARTWORK_SUBJECTS: 'ArtworkSubjects',
   ARTWORK_CITIES: 'ArtworkCities',
   ICONIC_IMAGES: 'IconicImages',
 } as const;

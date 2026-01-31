@@ -1,13 +1,14 @@
 export const dynamic = 'force-dynamic';
 // =============================================================================
-// Themes Index Page — Thematic Wings
+// Themes Index Page — Curatorial Concepts
 // Fondazione Prada Inspired
 // =============================================================================
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { generateListMetadata } from '@/lib/seo';
-import { getThemes, getThemesByCategory } from '@/lib/queries';
+import { getThemes, getGenres, getSubjectTerms } from '@/lib/queries';
+import type { Theme, Genre, SubjectTerm } from '@/types';
 
 export const metadata: Metadata = generateListMetadata('themes');
 
@@ -16,38 +17,47 @@ export const metadata: Metadata = generateListMetadata('themes');
 // =============================================================================
 
 export default async function ThemesPage() {
-  const [subjectThemes, styleThemes, conceptThemes, techniqueThemes] =
-    await Promise.all([
-      getThemesByCategory('SUBJECT'),
-      getThemesByCategory('STYLE'),
-      getThemesByCategory('CONCEPT'),
-      getThemesByCategory('TECHNIQUE'),
-    ]);
+  const [themes, genres, subjectTerms] = await Promise.all([
+    getThemes(),
+    getGenres(),
+    getSubjectTerms(),
+  ]);
 
-  const themeCategories = [
+  // Group subject terms by category
+  const placeSubjects = subjectTerms.filter((s: SubjectTerm) => s.category === 'PLACE');
+  const peopleSubjects = subjectTerms.filter((s: SubjectTerm) => s.category === 'PEOPLE');
+  const motifSubjects = subjectTerms.filter((s: SubjectTerm) => s.category === 'MOTIF');
+  const objectSubjects = subjectTerms.filter((s: SubjectTerm) => s.category === 'OBJECT');
+  const activitySubjects = subjectTerms.filter((s: SubjectTerm) => s.category === 'ACTIVITY');
+
+  const sections = [
     {
-      title: 'Subject',
-      description: 'What is depicted',
-      themes: subjectThemes,
+      title: 'Curatorial Themes',
+      description: 'Interpretive concepts and frameworks',
+      items: themes,
       color: '#C4A052', // Gold
+      linkPrefix: '/themes',
     },
     {
-      title: 'Concept',
-      description: 'Ideas explored',
-      themes: conceptThemes,
+      title: 'Genres',
+      description: 'Traditional subject classification',
+      items: genres,
       color: '#8B7355', // Bronze
+      linkPrefix: '/genres',
     },
     {
-      title: 'Style',
-      description: 'Artistic approaches',
-      themes: styleThemes,
+      title: 'Places',
+      description: 'Geographic subjects depicted',
+      items: placeSubjects,
       color: '#57534E', // Stone
+      linkPrefix: '/subjects',
     },
     {
-      title: 'Technique',
-      description: 'Methods & materials',
-      themes: techniqueThemes,
+      title: 'People',
+      description: 'Human subjects depicted',
+      items: peopleSubjects,
       color: '#78716C', // Warm gray
+      linkPrefix: '/subjects',
     },
   ];
 
@@ -86,9 +96,9 @@ export default async function ThemesPage() {
       </section>
 
       {/* Theme Categories */}
-      {themeCategories.map((category, catIndex) => (
+      {sections.map((section, catIndex) => (
         <section 
-          key={category.title}
+          key={section.title}
           className={`px-6 md:px-12 py-16 md:py-24 ${
             catIndex % 2 === 1 ? 'bg-[#E8E4DF]' : 'bg-[#FAF9F6]'
           }`}
@@ -99,32 +109,32 @@ export default async function ThemesPage() {
               <div>
                 <span 
                   className="text-[10px] tracking-[0.3em] uppercase block mb-3"
-                  style={{ color: category.color }}
+                  style={{ color: section.color }}
                 >
-                  {category.description}
+                  {section.description}
                 </span>
                 <h2 className="font-serif text-4xl md:text-6xl text-[#1C1917]">
-                  {category.title}
+                  {section.title}
                 </h2>
               </div>
               <span className="text-[10px] tracking-[0.2em] text-[#A8A29E]">
-                {category.themes.length} themes
+                {section.items.length} items
               </span>
             </div>
 
             {/* Theme Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {category.themes.map((theme, index) => (
+              {section.items.map((item: { id: string; slug: string; name: string; description?: string | null }, index: number) => (
                 <Link
-                  key={theme.id}
-                  href={`/themes/${theme.slug}`}
+                  key={item.id}
+                  href={`${section.linkPrefix}/${item.slug}`}
                   className="group"
                 >
                   <div className="relative aspect-[4/3] bg-[#1C1917] overflow-hidden">
                     {/* Background accent */}
                     <div 
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      style={{ backgroundColor: category.color }}
+                      style={{ backgroundColor: section.color }}
                     />
 
                     {/* Content */}
@@ -134,11 +144,11 @@ export default async function ThemesPage() {
                       </span>
                       <div>
                         <h3 className="font-serif text-xl md:text-2xl text-white group-hover:text-[#1C1917] transition-colors">
-                          {theme.name}
+                          {item.name}
                         </h3>
-                        {theme.description && (
+                        {item.description && (
                           <p className="text-white/40 group-hover:text-[#1C1917]/60 text-sm mt-2 line-clamp-2 transition-colors">
-                            {theme.description}
+                            {item.description}
                           </p>
                         )}
                       </div>
@@ -148,9 +158,9 @@ export default async function ThemesPage() {
               ))}
             </div>
 
-            {category.themes.length === 0 && (
+            {section.items.length === 0 && (
               <p className="text-[#A8A29E] text-center py-12">
-                No {category.title.toLowerCase()} themes documented yet.
+                No {section.title.toLowerCase()} documented yet.
               </p>
             )}
           </div>

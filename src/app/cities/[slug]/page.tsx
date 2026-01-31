@@ -165,7 +165,7 @@ export default async function CityPage({ params }: PageProps) {
                     className="group border border-[#E7E5E4] p-6 md:p-8 hover:border-[#1C1917] transition-colors"
                   >
                     <span className="text-[10px] tracking-[0.3em] uppercase text-[#A8A29E] block mb-4">
-                      {artist.medium}
+                      {artist.primaryObjectType?.name || 'Artist'}
                     </span>
                     <h3 className="font-serif text-2xl md:text-3xl text-[#1C1917] group-hover:text-[#78716C] transition-colors mb-2">
                       {artist.name}

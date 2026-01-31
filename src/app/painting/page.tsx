@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
 import {
-  getArtistsByMedium,
-  getIconicWorks,
+  getArtistsByObjectType,
+  getArtworksByObjectType,
   getMovements,
   countArtists,
   countArtworks,
@@ -30,20 +30,17 @@ export default async function PaintingPage() {
   // Fetch data in parallel
   const [
     painters,
-    notablePaintings,
+    paintingWorks,
     movements,
     totalArtists,
     totalArtworks,
   ] = await Promise.all([
-    getArtistsByMedium('PAINTING'),
-    getIconicWorks(),
+    getArtistsByObjectType('obj-1'), // painting
+    getArtworksByObjectType('obj-1'),
     getMovements(),
     countArtists(),
     countArtworks(),
   ]);
-
-  // Filter for painting
-  const paintingWorks = notablePaintings.filter(w => w.medium === 'PAINTING');
 
   return (
     <div>
@@ -74,7 +71,7 @@ export default async function PaintingPage() {
           Display: Grid of painter cards
           Links:
           - Each painter → /artists/[slug]
-          - "View All Painters" → /artists?medium=painting
+          - "View All Painters" → /artists?objectType=painting
         */}
       </section>
 
@@ -98,22 +95,21 @@ export default async function PaintingPage() {
           Display: Featured notable paintings
           Links:
           - Each painting → /works/[slug]
-          - "View All Notable Paintings" → /works?medium=painting&iconic=true
+          - "View All Notable Paintings" → /works?objectType=painting&iconic=true
         */}
       </section>
 
-      {/* Section 6: Thematic Groupings */}
-      <section data-section="themes">
+      {/* Section 6: Genre Groupings */}
+      <section data-section="genres">
         {/*
           Categories:
-          - Abstraction
-          - Figuration
-          - Calligraphic / Sign-based
-          - Landscape
+          - Abstract
+          - Figurative
           - Portrait
-          - Identity / Diaspora
+          - Landscape
+          - Genre Scene
 
-          Links: Each theme → /themes/[slug]?medium=painting
+          Links: Each genre → /genres/[slug]?objectType=painting
         */}
       </section>
 
@@ -145,7 +141,7 @@ export default async function PaintingPage() {
       {/* Section 9: Search CTA */}
       <section data-section="search-cta">
         {/*
-          Link: /search?medium=painting
+          Link: /search?objectType=painting
         */}
       </section>
     </div>

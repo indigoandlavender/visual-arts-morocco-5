@@ -56,7 +56,7 @@ export default function RootLayout({
                 { href: '/works', label: 'Works' },
                 { href: '/movements', label: 'Movements' },
                 { href: '/cities', label: 'Cities' },
-                { href: '/themes', label: 'Themes' },
+                { href: '/institutions', label: 'Institutions' },
               ].map((item) => (
                 <Link
                   key={item.href}

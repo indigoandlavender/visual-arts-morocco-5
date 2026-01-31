@@ -6,7 +6,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { generateListMetadata } from '@/lib/seo';
-import { getCities, getRegions, getCityFacets } from '@/lib/queries';
+import { getCities, countArtists, countArtworks, countInstitutions } from '@/lib/queries';
 import { MoroccoOverviewMapWrapper } from '@/components/city-map-wrapper';
 
 // Force dynamic rendering
@@ -30,15 +30,16 @@ const MAJOR_CITIES = [
 // =============================================================================
 
 export default async function CitiesPage() {
-  const [cities, regions, cityFacetsResult] = await Promise.all([
+  const [cities, totalArtists, totalArtworks, totalInstitutions] = await Promise.all([
     getCities(),
-    getRegions(),
-    getCityFacets(),
+    countArtists(),
+    countArtworks(),
+    countInstitutions(),
   ]);
 
   // Get other cities not in major list
   const majorSlugs = MAJOR_CITIES.map(c => c.slug);
-  const otherCities = cities.filter(city => !majorSlugs.includes(city.slug));
+  const otherCities = cities.filter((city: { slug: string }) => !majorSlugs.includes(city.slug));
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
@@ -154,7 +155,7 @@ export default async function CitiesPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {otherCities.map((city) => (
+              {otherCities.map((city: { id: string; slug: string; name: string; region?: string | null }) => (
                 <Link
                   key={city.id}
                   href={`/cities/${city.slug}`}

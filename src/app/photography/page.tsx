@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
 import {
-  getArtistsByMedium,
-  getIconicWorks,
+  getArtistsByObjectType,
+  getArtworksByObjectType,
   getMovements,
   countArtists,
   countArtworks,
@@ -30,20 +30,17 @@ export default async function PhotographyPage() {
   // Fetch data in parallel
   const [
     photographers,
-    iconicPhotos,
+    photographyWorks,
     movements,
     totalArtists,
     totalArtworks,
   ] = await Promise.all([
-    getArtistsByMedium('PHOTOGRAPHY'),
-    getIconicWorks(),
+    getArtistsByObjectType('obj-2'), // photograph
+    getArtworksByObjectType('obj-2'),
     getMovements(),
     countArtists(),
     countArtworks(),
   ]);
-
-  // Filter for photography
-  const photographyWorks = iconicPhotos.filter(w => w.medium === 'PHOTOGRAPHY');
 
   return (
     <div>
@@ -74,7 +71,7 @@ export default async function PhotographyPage() {
           Display: Grid of photographer cards
           Links:
           - Each photographer → /artists/[slug]
-          - "View All Photographers" → /artists?medium=photography
+          - "View All Photographers" → /artists?objectType=photograph
         */}
       </section>
 
@@ -96,22 +93,20 @@ export default async function PhotographyPage() {
           Display: Featured iconic images with cultural context
           Links:
           - Each photo → /works/[slug]
-          - "View All Iconic Photos" → /works?medium=photography&iconic=true
+          - "View All Iconic Photos" → /works?objectType=photograph&iconic=true
         */}
       </section>
 
-      {/* Section 6: Thematic Groupings */}
-      <section data-section="themes">
+      {/* Section 6: Genre Groupings */}
+      <section data-section="genres">
         {/*
           Categories:
           - Documentary
           - Portrait
-          - Street Photography
+          - Cityscape
           - Landscape
-          - Fashion
-          - Political
 
-          Links: Each theme → /themes/[slug]?medium=photography
+          Links: Each genre → /genres/[slug]?objectType=photograph
         */}
       </section>
 
@@ -138,7 +133,7 @@ export default async function PhotographyPage() {
       {/* Section 9: Search CTA */}
       <section data-section="search-cta">
         {/*
-          Link: /search?medium=photography
+          Link: /search?objectType=photograph
         */}
       </section>
     </div>

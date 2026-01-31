@@ -1,44 +1,23 @@
 // =============================================================================
 // Query Exports - Google Sheets Backend
-// Moroccan Art Platform
+// Moroccan Art Platform - Museum/Curatorial Standards
 // =============================================================================
 
-import {
-  // Artists
-  getAllArtists,
-  getArtistBySlug,
-  getArtistById,
-  getArtistsByMedium,
-  getArtistsByMovement,
-  getArtistsByTheme,
-  getArtistsByCity,
-  getRelatedArtists,
-  countArtists,
-
-  // Artworks
-  getAllArtworks,
-  getArtworkBySlug,
-  getArtworkById,
-  getArtworksByArtist,
-  getArtworksByTheme,
-  getArtworksByCity,
-  getIconicArtworks,
-  countArtworks,
-
-  // Movements
+export {
+  // Lookup Tables
+  getAllObjectTypes,
+  getObjectTypeBySlug,
+  getAllGenres,
+  getGenreBySlug,
   getAllMovements,
   getMovementBySlug,
-  countMovements,
-
-  // Themes
   getAllThemes,
   getThemeBySlug,
-  countThemes,
-
-  // Cities
+  getAllSubjectTerms,
+  getSubjectTermBySlug,
+  getSubjectTermsByCategory,
   getAllCities,
   getCityBySlug,
-  countCities,
 
   // Institutions
   getAllInstitutions,
@@ -46,136 +25,143 @@ import {
   getInstitutionsByCity,
   getInstitutionsByCitySlug,
   getInstitutionsByType,
-  countInstitutions,
-  countInstitutionsByCity,
 
-  // Search
-  searchAll,
-} from '../db/data-access';
-
-// =============================================================================
-// Re-export with original names
-// =============================================================================
-
-export {
-  // Artists - original exports
+  // Artists
   getAllArtists,
   getArtistBySlug,
   getArtistById,
-  getArtistsByMedium,
+  getArtistsByObjectType,
   getArtistsByMovement,
   getArtistsByTheme,
   getArtistsByCity,
   getRelatedArtists,
-  countArtists,
 
-  // Artworks - original exports
+  // Artworks
   getAllArtworks,
   getArtworkBySlug,
   getArtworkById,
   getArtworksByArtist,
+  getArtworksByObjectType,
+  getArtworksByGenre,
   getArtworksByTheme,
+  getArtworksBySubject,
   getArtworksByCity,
   getIconicArtworks,
-  countArtworks,
-
-  // Movements - original exports
-  getAllMovements,
-  getMovementBySlug,
-  countMovements,
-
-  // Themes - original exports
-  getAllThemes,
-  getThemeBySlug,
-  countThemes,
-
-  // Cities - original exports
-  getAllCities,
-  getCityBySlug,
-  countCities,
-
-  // Institutions - original exports
-  getAllInstitutions,
-  getInstitutionBySlug,
-  getInstitutionsByCity,
-  getInstitutionsByCitySlug,
-  getInstitutionsByType,
-  countInstitutions,
-  countInstitutionsByCity,
 
   // Search
   searchAll,
-};
+
+  // Counts
+  countArtists,
+  countArtworks,
+  countMovements,
+  countThemes,
+  countCities,
+  countInstitutions,
+  countInstitutionsByCity,
+  countObjectTypes,
+  countGenres,
+  countSubjectTerms,
+
+  // Legacy
+  getArtistsByMedium,
+} from '../db/data-access';
 
 // =============================================================================
-// Aliases for backward compatibility with page imports
+// Aliases for convenience
 // =============================================================================
 
-// Artists aliases
+import {
+  getAllArtists,
+  getAllArtworks,
+  getAllMovements,
+  getAllThemes,
+  getAllCities,
+  getAllObjectTypes,
+  getAllGenres,
+  getAllSubjectTerms,
+  getAllInstitutions,
+  getIconicArtworks,
+  countArtists,
+  countArtworks,
+  countInstitutions,
+} from '../db/data-access';
+
+// Artists
 export const getArtists = getAllArtists;
 export const getArtistCount = countArtists;
-export const getFeaturedArtists = getAllArtists; // Returns all, pages can slice
+export const getFeaturedArtists = getAllArtists;
 
-// Artworks aliases
+// Artworks
 export const getArtworks = getAllArtworks;
 export const getArtworkCount = countArtworks;
 export const getIconicWorks = getIconicArtworks;
 export const getFeaturedWorks = getIconicArtworks;
-export const getRelatedArtworks = async (artworkId: string, limit = 6) => {
-  const artworks = await getAllArtworks();
-  const current = artworks.find(a => a.id === artworkId);
-  if (!current) return [];
-  // Return artworks by same artist or same themes
-  return artworks
-    .filter(a => a.id !== artworkId && a.artistId === current.artistId)
-    .slice(0, limit);
-};
 
-// Movements aliases
+// Related artworks (same artist, theme, or movement)
+export async function getRelatedArtworks(artworkId: string, limit = 6) {
+  const allArtworks = await getAllArtworks();
+  const currentArtwork = allArtworks.find(a => a.id === artworkId);
+  if (!currentArtwork) return [];
+
+  // Score artworks by relatedness
+  const scored = allArtworks
+    .filter(a => a.id !== artworkId)
+    .map(artwork => {
+      let score = 0;
+      // Same artist
+      if (artwork.artistId === currentArtwork.artistId) score += 10;
+      // Same movement
+      if (artwork.movementId && artwork.movementId === currentArtwork.movementId) score += 5;
+      // Same genre
+      if (artwork.genreId && artwork.genreId === currentArtwork.genreId) score += 3;
+      // Same object type
+      if (artwork.objectTypeId === currentArtwork.objectTypeId) score += 2;
+      // Shared themes
+      const sharedThemes = artwork.themes?.filter(t => 
+        currentArtwork.themes?.some(ct => ct.id === t.id)
+      ) || [];
+      score += sharedThemes.length * 2;
+      // Shared subjects
+      const sharedSubjects = artwork.subjects?.filter(s => 
+        currentArtwork.subjects?.some(cs => cs.id === s.id)
+      ) || [];
+      score += sharedSubjects.length * 2;
+      return { artwork, score };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(item => item.artwork);
+
+  return scored;
+}
+
+// Lookup tables
 export const getMovements = getAllMovements;
-export const getMovementFacets = async () => ({ movements: await getAllMovements() });
-
-// Themes aliases
 export const getThemes = getAllThemes;
-export const getThemesByCategory = async (category: string) => {
-  const themes = await getAllThemes();
-  return themes.filter(t => t.category === category);
-};
-export const getThemeFacets = async () => ({ themes: await getAllThemes() });
-
-// Cities aliases
 export const getCities = getAllCities;
-export const getRegions = async () => {
-  const cities = await getAllCities();
-  const regions = [...new Set(cities.map(c => c.region).filter(Boolean))];
-  return regions.map(r => ({ name: r, cities: cities.filter(c => c.region === r) }));
-};
-export const getCitiesByRegion = async (region: string) => {
-  const cities = await getAllCities();
-  return cities.filter(c => c.region === region);
-};
-export const getCityFacets = async () => ({ cities: await getAllCities() });
-
-// Institutions aliases
+export const getObjectTypes = getAllObjectTypes;
+export const getGenres = getAllGenres;
+export const getSubjectTerms = getAllSubjectTerms;
 export const getInstitutions = getAllInstitutions;
 export const getInstitutionCount = countInstitutions;
 
 // =============================================================================
-// Facet functions (return filter options for UI)
+// Facet functions (for filter UI)
 // =============================================================================
 
 export const getArtistFacets = async () => {
-  const [artists, movements, themes, cities] = await Promise.all([
+  const [artists, objectTypes, movements, themes, cities] = await Promise.all([
     getAllArtists(),
+    getAllObjectTypes(),
     getAllMovements(),
     getAllThemes(),
     getAllCities(),
   ]);
 
-  const mediums = [...new Set(artists.map(a => a.medium).filter(Boolean))];
-
   return {
-    mediums,
+    objectTypes,
     movements,
     themes,
     cities,
@@ -184,19 +170,20 @@ export const getArtistFacets = async () => {
 };
 
 export const getArtworkFacets = async () => {
-  const [artworks, artists, themes, cities] = await Promise.all([
+  const [artworks, objectTypes, genres, themes, subjects, cities] = await Promise.all([
     getAllArtworks(),
-    getAllArtists(),
+    getAllObjectTypes(),
+    getAllGenres(),
     getAllThemes(),
+    getAllSubjectTerms(),
     getAllCities(),
   ]);
 
-  const mediums = [...new Set(artworks.map(a => a.medium).filter(Boolean))];
-
   return {
-    mediums,
-    artists,
+    objectTypes,
+    genres,
     themes,
+    subjects,
     cities,
     totalCount: artworks.length,
   };

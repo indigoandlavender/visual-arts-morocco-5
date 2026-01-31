@@ -77,8 +77,8 @@ export default async function ThemePage({ params }: PageProps) {
           */}
         </section>
 
-        {/* Section 4: Filter by Medium */}
-        <section data-section="medium-filter">
+        {/* Section 4: Filter by Object Type */}
+        <section data-section="objectType-filter">
           {/*
             Options:
             - All
@@ -87,8 +87,8 @@ export default async function ThemePage({ params }: PageProps) {
 
             Links:
             - /themes/[slug]
-            - /themes/[slug]?medium=photography
-            - /themes/[slug]?medium=painting
+            - /themes/[slug]?objectType=photograph
+            - /themes/[slug]?objectType=painting
           */}
         </section>
 

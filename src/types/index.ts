@@ -1,20 +1,66 @@
 // =============================================================================
 // Core Type Definitions
-// Moroccan Art Platform - Google Sheets Backend
+// Moroccan Art Platform - Museum/Curatorial Standards
 // =============================================================================
 
 // =============================================================================
 // ENUMS
 // =============================================================================
 
-export type Medium = 'PHOTOGRAPHY' | 'PAINTING' | 'BOTH';
 export type ContentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type AccessTier = 'FREE' | 'PREMIUM';
 export type UserTier = 'FREE' | 'PREMIUM' | 'INSTITUTIONAL';
-export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPT' | 'CONCEPTUAL';
 export type CityRelationType = 'BORN' | 'BASED' | 'WORKED' | 'DEPICTED' | 'CREATED';
 export type ArtistRelationType = 'CONTEMPORARY' | 'INFLUENCED_BY' | 'TEACHER_STUDENT' | 'COLLABORATED';
 export type InstitutionType = 'MUSEUM' | 'GALLERY' | 'CULTURAL_CENTER' | 'ART_SCHOOL' | 'FOUNDATION' | 'RESIDENCY';
+export type SubjectCategory = 'PLACE' | 'PEOPLE' | 'MOTIF' | 'OBJECT' | 'ACTIVITY';
+
+// =============================================================================
+// LOOKUP/TAXONOMY TYPES
+// =============================================================================
+
+// Physical form of artwork (Painting, Photograph, Sculpture, etc.)
+export interface ObjectType {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+}
+
+// Traditional subject classification (Portrait, Landscape, Abstract, etc.)
+export interface Genre {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+}
+
+// Art historical periods and schools
+export interface Movement {
+  id: string;
+  slug: string;
+  name: string;
+  nameArabic?: string | null;
+  description?: string | null;
+  periodStart?: number | null;
+  periodEnd?: number | null;
+}
+
+// Curatorial/interpretive concepts (Identity, Postcolonialism, etc.)
+export interface Theme {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+}
+
+// Controlled vocabulary for depicted content (Medina, Women, Calligraphy, etc.)
+export interface SubjectTerm {
+  id: string;
+  slug: string;
+  name: string;
+  category: SubjectCategory;
+}
 
 // =============================================================================
 // CORE ENTITY TYPES
@@ -25,7 +71,8 @@ export interface Artist {
   slug: string;
   name: string;
   nameArabic?: string | null;
-  medium: Medium;
+  primaryObjectTypeId?: string | null;
+  primaryObjectType?: ObjectType;
   birthYear?: number | null;
   deathYear?: number | null;
   biographyShort?: string | null;
@@ -47,13 +94,16 @@ export interface Artwork {
   title: string;
   titleArabic?: string | null;
   artistId: string;
-  artist?: { id: string; slug: string; name: string; medium: Medium };
-  medium: Medium;
+  artist?: { id: string; slug: string; name: string; primaryObjectTypeId?: string };
+  objectTypeId?: string | null;
+  objectType?: ObjectType;
+  genreId?: string | null;
+  genre?: Genre;
+  materials?: string | null;
+  dimensions?: string | null;
   year?: number | null;
   yearEnd?: number | null;
   description?: string | null;
-  dimensions?: string | null;
-  materialsAndTechniques?: string | null;
   currentLocation?: string | null;
   imageUrl?: string | null;
   isIconic: boolean;
@@ -62,27 +112,9 @@ export interface Artwork {
   status: ContentStatus;
   // Relations
   themes?: Theme[];
+  subjects?: SubjectTerm[];
   cities?: { city: City; relationType: CityRelationType }[];
   iconicImage?: IconicImage;
-}
-
-export interface Movement {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  description?: string | null;
-  periodStart?: number | null;
-  periodEnd?: number | null;
-}
-
-export interface Theme {
-  id: string;
-  slug: string;
-  name: string;
-  nameArabic?: string | null;
-  description?: string | null;
-  category: ThemeCategory;
 }
 
 export interface City {
@@ -143,11 +175,13 @@ export interface User {
 
 export interface SearchParams {
   q?: string;
-  medium?: Medium | Medium[];
+  objectType?: string | string[];
+  genre?: string | string[];
   periodStart?: number;
   periodEnd?: number;
   city?: string | string[];
   theme?: string | string[];
+  subject?: string | string[];
   movement?: string | string[];
   artist?: string;
   iconic?: boolean;
@@ -172,10 +206,12 @@ export interface FilterFacet {
 }
 
 export interface FilterFacets {
-  mediums: FilterFacet[];
+  objectTypes: FilterFacet[];
+  genres: FilterFacet[];
   periods: FilterFacet[];
   cities: FilterFacet[];
   themes: FilterFacet[];
+  subjects: FilterFacet[];
   movements: FilterFacet[];
 }
 
@@ -233,3 +269,13 @@ export interface BreadcrumbItem {
   label: string;
   href: string;
 }
+
+// =============================================================================
+// LEGACY COMPATIBILITY
+// =============================================================================
+
+/** @deprecated Use ObjectType instead */
+export type Medium = 'PHOTOGRAPHY' | 'PAINTING' | 'BOTH';
+
+/** @deprecated Use Theme instead */
+export type ThemeCategory = 'SUBJECT' | 'STYLE' | 'TECHNIQUE' | 'CONCEPT' | 'CONCEPTUAL';

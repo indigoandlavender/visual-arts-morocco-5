@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
     // Get all artists
     const artists = await getArtists();
 
-    // Optional: filter by medium
-    const medium = searchParams.get('medium');
+    // Optional: filter by object type
+    const objectType = searchParams.get('objectType');
     let filtered = artists;
-    if (medium) {
+    if (objectType) {
       filtered = artists.filter(a =>
-        a.medium === medium.toUpperCase() || a.medium === 'BOTH'
+        a.primaryObjectType?.slug === objectType.toLowerCase()
       );
     }
 

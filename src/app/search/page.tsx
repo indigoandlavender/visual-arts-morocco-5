@@ -80,11 +80,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <section data-section="filters">
         {/*
           Filter Dimensions:
-          - Medium: {searchResults.facets.medium}
-          - Time Period: {searchResults.facets.period}
-          - City: {searchResults.facets.city}
-          - Theme: {searchResults.facets.theme}
-          - Movement: {searchResults.facets.movement}
+          - Object Type: {searchResults.facets.objectTypes}
+          - Genre: {searchResults.facets.genres}
+          - Time Period: {searchResults.facets.periods}
+          - City: {searchResults.facets.cities}
+          - Theme: {searchResults.facets.themes}
+          - Subject: {searchResults.facets.subjects}
+          - Movement: {searchResults.facets.movements}
 
           Display:
           - Faceted counts for each option

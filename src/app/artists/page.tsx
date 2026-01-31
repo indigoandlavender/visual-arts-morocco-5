@@ -116,10 +116,10 @@ export default async function ArtistsPage() {
                         {String(index + 1).padStart(2, '0')}
                       </span>
 
-                      {/* Medium badge */}
-                      {artist.medium && (
+                      {/* Object Type badge */}
+                      {artist.primaryObjectType && (
                         <span className="absolute bottom-6 left-6 text-[10px] tracking-[0.2em] uppercase text-[#78716C] group-hover:text-white/70 transition-colors">
-                          {artist.medium}
+                          {artist.primaryObjectType.name}
                         </span>
                       )}
 

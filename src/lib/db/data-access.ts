@@ -2,25 +2,102 @@ import { readSheet, SHEETS } from './sheets-client';
 import type {
   Artist,
   Artwork,
+  ObjectType,
+  Genre,
   Movement,
   Theme,
+  SubjectTerm,
   City,
   Institution,
-  Medium,
   ContentStatus,
-  ThemeCategory,
   CityRelationType,
   ArtistRelationType,
   InstitutionType,
+  SubjectCategory,
 } from '@/types';
 
-// Row types from sheets (flat structure)
+// =============================================================================
+// ROW TYPES (flat structure from sheets)
+// =============================================================================
+
+interface ObjectTypeRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+}
+
+interface GenreRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+}
+
+interface MovementRow {
+  id: string;
+  slug: string;
+  name: string;
+  nameAr: string | null;
+  description: string | null;
+  periodStart: number | null;
+  periodEnd: number | null;
+}
+
+interface ThemeRow {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+}
+
+interface SubjectTermRow {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+}
+
+interface CityRow {
+  id: string;
+  slug: string;
+  name: string;
+  nameAr: string | null;
+  region: string | null;
+  country: string;
+  description: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+interface InstitutionRow {
+  id: string;
+  slug: string;
+  name: string;
+  nameAr: string | null;
+  type: string;
+  cityId: string;
+  address: string | null;
+  description: string | null;
+  descriptionLong: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  hours: string | null;
+  admission: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  yearEstablished: number | null;
+  highlights: string | null;
+  status: string;
+}
+
 interface ArtistRow {
   id: string;
   slug: string;
   name: string;
   nameAr: string | null;
-  medium: string;
+  primaryObjectTypeId: string | null;
   birthYear: number | null;
   deathYear: number | null;
   biographyShort: string | null;
@@ -38,48 +115,18 @@ interface ArtworkRow {
   title: string;
   titleAr: string | null;
   artistId: string;
-  medium: string;
+  objectTypeId: string | null;
+  genreId: string | null;
+  materials: string | null;
+  dimensions: string | null;
   year: number | null;
   yearEnd: number | null;
   description: string | null;
-  dimensions: string | null;
-  materialsAndTechniques: string | null;
   currentLocation: string | null;
   imageUrl: string | null;
   isIconic: boolean;
   movementId: string | null;
   status: string;
-}
-
-interface MovementRow {
-  id: string;
-  slug: string;
-  name: string;
-  nameAr: string | null;
-  description: string | null;
-  periodStart: number | null;
-  periodEnd: number | null;
-}
-
-interface ThemeRow {
-  id: string;
-  slug: string;
-  name: string;
-  nameAr: string | null;
-  description: string | null;
-  category: string;
-}
-
-interface CityRow {
-  id: string;
-  slug: string;
-  name: string;
-  nameAr: string | null;
-  region: string | null;
-  country: string;
-  description: string | null;
-  latitude: number | null;
-  longitude: number | null;
 }
 
 interface ArtistCityRow {
@@ -109,6 +156,11 @@ interface ArtworkThemeRow {
   themeId: string;
 }
 
+interface ArtworkSubjectRow {
+  artworkId: string;
+  subjectId: string;
+}
+
 interface ArtworkCityRow {
   artworkId: string;
   cityId: string;
@@ -127,47 +179,32 @@ interface IconicImageRow {
   interpretation: string | null;
 }
 
-interface InstitutionRow {
-  id: string;
-  slug: string;
-  name: string;
-  nameAr: string | null;
-  type: string;
-  cityId: string;
-  address: string | null;
-  description: string | null;
-  descriptionLong: string | null;
-  website: string | null;
-  phone: string | null;
-  email: string | null;
-  hours: string | null;
-  admission: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  yearEstablished: number | null;
-  highlights: string | null;
-  status: string;
-}
+// =============================================================================
+// CACHE
+// =============================================================================
 
-// Cache for data (refreshed on each request in dev, cached in production)
 let cache: {
-  artists?: ArtistRow[];
-  artworks?: ArtworkRow[];
+  objectTypes?: ObjectTypeRow[];
+  genres?: GenreRow[];
   movements?: MovementRow[];
   themes?: ThemeRow[];
+  subjectTerms?: SubjectTermRow[];
   cities?: CityRow[];
   institutions?: InstitutionRow[];
+  artists?: ArtistRow[];
+  artworks?: ArtworkRow[];
   artistCities?: ArtistCityRow[];
   artistThemes?: ArtistThemeRow[];
   artistMovements?: ArtistMovementRow[];
   artistRelations?: ArtistRelationRow[];
   artworkThemes?: ArtworkThemeRow[];
+  artworkSubjects?: ArtworkSubjectRow[];
   artworkCities?: ArtworkCityRow[];
   iconicImages?: IconicImageRow[];
   timestamp?: number;
 } = {};
 
-const CACHE_TTL = process.env.NODE_ENV === 'production' ? 60000 : 5000; // 1 min prod, 5s dev
+const CACHE_TTL = process.env.NODE_ENV === 'production' ? 60000 : 5000;
 
 async function getCache() {
   const now = Date.now();
@@ -176,174 +213,93 @@ async function getCache() {
   }
 
   try {
-    // Refresh cache
     const [
-      artists,
-      artworks,
+      objectTypes,
+      genres,
       movements,
       themes,
+      subjectTerms,
       cities,
       institutions,
+      artists,
+      artworks,
       artistCities,
       artistThemes,
       artistMovements,
       artistRelations,
       artworkThemes,
+      artworkSubjects,
       artworkCities,
       iconicImages,
     ] = await Promise.all([
-      readSheet<ArtistRow>(SHEETS.ARTISTS),
-      readSheet<ArtworkRow>(SHEETS.ARTWORKS),
+      readSheet<ObjectTypeRow>(SHEETS.OBJECT_TYPES),
+      readSheet<GenreRow>(SHEETS.GENRES),
       readSheet<MovementRow>(SHEETS.MOVEMENTS),
       readSheet<ThemeRow>(SHEETS.THEMES),
+      readSheet<SubjectTermRow>(SHEETS.SUBJECT_TERMS),
       readSheet<CityRow>(SHEETS.CITIES),
       readSheet<InstitutionRow>(SHEETS.INSTITUTIONS),
+      readSheet<ArtistRow>(SHEETS.ARTISTS),
+      readSheet<ArtworkRow>(SHEETS.ARTWORKS),
       readSheet<ArtistCityRow>(SHEETS.ARTIST_CITIES),
       readSheet<ArtistThemeRow>(SHEETS.ARTIST_THEMES),
       readSheet<ArtistMovementRow>(SHEETS.ARTIST_MOVEMENTS),
       readSheet<ArtistRelationRow>(SHEETS.ARTIST_RELATIONS),
       readSheet<ArtworkThemeRow>(SHEETS.ARTWORK_THEMES),
+      readSheet<ArtworkSubjectRow>(SHEETS.ARTWORK_SUBJECTS),
       readSheet<ArtworkCityRow>(SHEETS.ARTWORK_CITIES),
       readSheet<IconicImageRow>(SHEETS.ICONIC_IMAGES),
     ]);
 
     cache = {
-      artists,
-      artworks,
+      objectTypes,
+      genres,
       movements,
       themes,
+      subjectTerms,
       cities,
       institutions,
+      artists,
+      artworks,
       artistCities,
       artistThemes,
       artistMovements,
       artistRelations,
       artworkThemes,
+      artworkSubjects,
       artworkCities,
       iconicImages,
       timestamp: now,
     };
   } catch (error) {
     console.error('Error fetching data from Google Sheets:', error);
-    // Return empty cache if not initialized
     if (!cache.timestamp) {
-      cache = {
-        artists: [],
-        artworks: [],
-        movements: [],
-        themes: [],
-        cities: [],
-        artistCities: [],
-        artistThemes: [],
-        artistMovements: [],
-        artistRelations: [],
-        artworkThemes: [],
-        artworkCities: [],
-        iconicImages: [],
-        timestamp: now,
-      };
+      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY env var or add credentials file.');
     }
   }
 
   return cache;
 }
 
-// Helper to build full artist object with relations
-function buildArtist(
-  row: ArtistRow,
-  data: Awaited<ReturnType<typeof getCache>>
-): Artist {
-  const artistCities = data.artistCities?.filter(ac => ac.artistId === row.id) || [];
-  const artistThemes = data.artistThemes?.filter(at => at.artistId === row.id) || [];
-  const artistMovements = data.artistMovements?.filter(am => am.artistId === row.id) || [];
+// =============================================================================
+// BUILD FUNCTIONS
+// =============================================================================
 
+function buildObjectType(row: ObjectTypeRow): ObjectType {
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    nameArabic: row.nameAr,
-    medium: row.medium as Medium,
-    birthYear: row.birthYear,
-    deathYear: row.deathYear,
-    biographyShort: row.biographyShort,
-    biography: row.biography,
-    activePeriodStart: row.activePeriodStart,
-    activePeriodEnd: row.activePeriodEnd,
-    photoUrl: row.photoUrl,
-    websiteUrl: row.websiteUrl,
-    status: row.status as ContentStatus,
-    cities: artistCities.map(ac => {
-      const city = data.cities?.find(c => c.id === ac.cityId);
-      return city ? {
-        city: buildCity(city),
-        relationType: ac.relationType as CityRelationType,
-      } : null;
-    }).filter(Boolean) as { city: City; relationType: CityRelationType }[],
-    themes: artistThemes.map(at => {
-      const theme = data.themes?.find(t => t.id === at.themeId);
-      return theme ? buildTheme(theme) : null;
-    }).filter(Boolean) as Theme[],
-    movements: artistMovements.map(am => {
-      const movement = data.movements?.find(m => m.id === am.movementId);
-      return movement ? buildMovement(movement) : null;
-    }).filter(Boolean) as Movement[],
+    description: row.description,
   };
 }
 
-function buildArtwork(
-  row: ArtworkRow,
-  data: Awaited<ReturnType<typeof getCache>>
-): Artwork {
-  const artworkThemes = data.artworkThemes?.filter(at => at.artworkId === row.id) || [];
-  const artworkCities = data.artworkCities?.filter(ac => ac.artworkId === row.id) || [];
-  const artistRow = data.artists?.find(a => a.id === row.artistId);
-  const movementRow = row.movementId ? data.movements?.find(m => m.id === row.movementId) : null;
-  const iconicImage = data.iconicImages?.find(ii => ii.artworkId === row.id);
-
+function buildGenre(row: GenreRow): Genre {
   return {
     id: row.id,
     slug: row.slug,
-    title: row.title,
-    titleArabic: row.titleAr,
-    artistId: row.artistId,
-    artist: artistRow ? {
-      id: artistRow.id,
-      slug: artistRow.slug,
-      name: artistRow.name,
-      medium: artistRow.medium as Medium,
-    } : undefined,
-    medium: row.medium as Medium,
-    year: row.year,
-    yearEnd: row.yearEnd,
+    name: row.name,
     description: row.description,
-    dimensions: row.dimensions,
-    materialsAndTechniques: row.materialsAndTechniques,
-    currentLocation: row.currentLocation,
-    imageUrl: row.imageUrl,
-    isIconic: row.isIconic,
-    movementId: row.movementId,
-    movement: movementRow ? buildMovement(movementRow) : undefined,
-    status: row.status as ContentStatus,
-    themes: artworkThemes.map(at => {
-      const theme = data.themes?.find(t => t.id === at.themeId);
-      return theme ? buildTheme(theme) : null;
-    }).filter(Boolean) as Theme[],
-    cities: artworkCities.map(ac => {
-      const city = data.cities?.find(c => c.id === ac.cityId);
-      return city ? {
-        city: buildCity(city),
-        relationType: ac.relationType as CityRelationType,
-      } : null;
-    }).filter(Boolean) as { city: City; relationType: CityRelationType }[],
-    iconicImage: iconicImage ? {
-      subject: iconicImage.subject,
-      composition: iconicImage.composition,
-      colorPalette: iconicImage.colorPalette,
-      technique: iconicImage.technique,
-      historicalContext: iconicImage.historicalContext,
-      significance: iconicImage.significance,
-      interpretation: iconicImage.interpretation,
-    } : undefined,
   };
 }
 
@@ -364,9 +320,16 @@ function buildTheme(row: ThemeRow): Theme {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    nameArabic: row.nameAr,
     description: row.description,
-    category: row.category as ThemeCategory,
+  };
+}
+
+function buildSubjectTerm(row: SubjectTermRow): SubjectTerm {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    category: row.category as SubjectCategory,
   };
 }
 
@@ -413,7 +376,265 @@ function buildInstitution(
   };
 }
 
-// Public API
+function buildArtist(
+  row: ArtistRow,
+  data: Awaited<ReturnType<typeof getCache>>
+): Artist {
+  // Get object type
+  const objectTypeRow = data.objectTypes?.find(o => o.id === row.primaryObjectTypeId);
+  
+  // Get cities
+  const cityRelations = data.artistCities?.filter(ac => ac.artistId === row.id) || [];
+  const cities = cityRelations.map(rel => {
+    const cityRow = data.cities?.find(c => c.id === rel.cityId);
+    return cityRow ? {
+      city: buildCity(cityRow),
+      relationType: rel.relationType as CityRelationType,
+    } : null;
+  }).filter(Boolean) as { city: City; relationType: CityRelationType }[];
+
+  // Get themes
+  const themeIds = data.artistThemes?.filter(at => at.artistId === row.id).map(at => at.themeId) || [];
+  const themes = themeIds
+    .map(id => data.themes?.find(t => t.id === id))
+    .filter(Boolean)
+    .map(t => buildTheme(t!));
+
+  // Get movements
+  const movementIds = data.artistMovements?.filter(am => am.artistId === row.id).map(am => am.movementId) || [];
+  const movements = movementIds
+    .map(id => data.movements?.find(m => m.id === id))
+    .filter(Boolean)
+    .map(m => buildMovement(m!));
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    nameArabic: row.nameAr,
+    primaryObjectTypeId: row.primaryObjectTypeId,
+    primaryObjectType: objectTypeRow ? buildObjectType(objectTypeRow) : undefined,
+    birthYear: row.birthYear,
+    deathYear: row.deathYear,
+    biographyShort: row.biographyShort,
+    biography: row.biography,
+    activePeriodStart: row.activePeriodStart,
+    activePeriodEnd: row.activePeriodEnd,
+    photoUrl: row.photoUrl,
+    websiteUrl: row.websiteUrl,
+    status: row.status as ContentStatus,
+    cities,
+    themes,
+    movements,
+  };
+}
+
+function buildArtwork(
+  row: ArtworkRow,
+  data: Awaited<ReturnType<typeof getCache>>
+): Artwork {
+  // Get artist
+  const artistRow = data.artists?.find(a => a.id === row.artistId);
+
+  // Get object type
+  const objectTypeRow = data.objectTypes?.find(o => o.id === row.objectTypeId);
+
+  // Get genre
+  const genreRow = data.genres?.find(g => g.id === row.genreId);
+
+  // Get movement
+  const movementRow = data.movements?.find(m => m.id === row.movementId);
+
+  // Get themes
+  const themeIds = data.artworkThemes?.filter(at => at.artworkId === row.id).map(at => at.themeId) || [];
+  const themes = themeIds
+    .map(id => data.themes?.find(t => t.id === id))
+    .filter(Boolean)
+    .map(t => buildTheme(t!));
+
+  // Get subjects
+  const subjectIds = data.artworkSubjects?.filter(as => as.artworkId === row.id).map(as => as.subjectId) || [];
+  const subjects = subjectIds
+    .map(id => data.subjectTerms?.find(s => s.id === id))
+    .filter(Boolean)
+    .map(s => buildSubjectTerm(s!));
+
+  // Get cities
+  const cityRelations = data.artworkCities?.filter(ac => ac.artworkId === row.id) || [];
+  const cities = cityRelations.map(rel => {
+    const cityRow = data.cities?.find(c => c.id === rel.cityId);
+    return cityRow ? {
+      city: buildCity(cityRow),
+      relationType: rel.relationType as CityRelationType,
+    } : null;
+  }).filter(Boolean) as { city: City; relationType: CityRelationType }[];
+
+  // Get iconic image
+  const iconicRow = data.iconicImages?.find(i => i.artworkId === row.id);
+  const iconicImage = iconicRow ? {
+    subject: iconicRow.subject,
+    composition: iconicRow.composition,
+    colorPalette: iconicRow.colorPalette,
+    technique: iconicRow.technique,
+    historicalContext: iconicRow.historicalContext,
+    significance: iconicRow.significance,
+    interpretation: iconicRow.interpretation,
+  } : undefined;
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    titleArabic: row.titleAr,
+    artistId: row.artistId,
+    artist: artistRow ? {
+      id: artistRow.id,
+      slug: artistRow.slug,
+      name: artistRow.name,
+      primaryObjectTypeId: artistRow.primaryObjectTypeId || undefined,
+    } : undefined,
+    objectTypeId: row.objectTypeId,
+    objectType: objectTypeRow ? buildObjectType(objectTypeRow) : undefined,
+    genreId: row.genreId,
+    genre: genreRow ? buildGenre(genreRow) : undefined,
+    materials: row.materials,
+    dimensions: row.dimensions,
+    year: row.year,
+    yearEnd: row.yearEnd,
+    description: row.description,
+    currentLocation: row.currentLocation,
+    imageUrl: row.imageUrl,
+    isIconic: row.isIconic,
+    movementId: row.movementId,
+    movement: movementRow ? buildMovement(movementRow) : undefined,
+    status: row.status as ContentStatus,
+    themes,
+    subjects,
+    cities,
+    iconicImage,
+  };
+}
+
+// =============================================================================
+// PUBLIC API - LOOKUP TABLES
+// =============================================================================
+
+export async function getAllObjectTypes(): Promise<ObjectType[]> {
+  const data = await getCache();
+  return (data.objectTypes || []).map(buildObjectType);
+}
+
+export async function getObjectTypeBySlug(slug: string): Promise<ObjectType | null> {
+  const data = await getCache();
+  const row = data.objectTypes?.find(o => o.slug === slug);
+  return row ? buildObjectType(row) : null;
+}
+
+export async function getAllGenres(): Promise<Genre[]> {
+  const data = await getCache();
+  return (data.genres || []).map(buildGenre);
+}
+
+export async function getGenreBySlug(slug: string): Promise<Genre | null> {
+  const data = await getCache();
+  const row = data.genres?.find(g => g.slug === slug);
+  return row ? buildGenre(row) : null;
+}
+
+export async function getAllMovements(): Promise<Movement[]> {
+  const data = await getCache();
+  return (data.movements || []).map(buildMovement);
+}
+
+export async function getMovementBySlug(slug: string): Promise<Movement | null> {
+  const data = await getCache();
+  const row = data.movements?.find(m => m.slug === slug);
+  return row ? buildMovement(row) : null;
+}
+
+export async function getAllThemes(): Promise<Theme[]> {
+  const data = await getCache();
+  return (data.themes || []).map(buildTheme);
+}
+
+export async function getThemeBySlug(slug: string): Promise<Theme | null> {
+  const data = await getCache();
+  const row = data.themes?.find(t => t.slug === slug);
+  return row ? buildTheme(row) : null;
+}
+
+export async function getAllSubjectTerms(): Promise<SubjectTerm[]> {
+  const data = await getCache();
+  return (data.subjectTerms || []).map(buildSubjectTerm);
+}
+
+export async function getSubjectTermBySlug(slug: string): Promise<SubjectTerm | null> {
+  const data = await getCache();
+  const row = data.subjectTerms?.find(s => s.slug === slug);
+  return row ? buildSubjectTerm(row) : null;
+}
+
+export async function getSubjectTermsByCategory(category: SubjectCategory): Promise<SubjectTerm[]> {
+  const data = await getCache();
+  return (data.subjectTerms || [])
+    .filter(s => s.category === category)
+    .map(buildSubjectTerm);
+}
+
+export async function getAllCities(): Promise<City[]> {
+  const data = await getCache();
+  return (data.cities || []).map(buildCity);
+}
+
+export async function getCityBySlug(slug: string): Promise<City | null> {
+  const data = await getCache();
+  const row = data.cities?.find(c => c.slug === slug);
+  return row ? buildCity(row) : null;
+}
+
+// =============================================================================
+// PUBLIC API - INSTITUTIONS
+// =============================================================================
+
+export async function getAllInstitutions(): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
+  const data = await getCache();
+  const row = data.institutions?.find(i => i.slug === slug);
+  return row ? buildInstitution(row, data) : null;
+}
+
+export async function getInstitutionsByCity(cityId: string): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.cityId === cityId && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByCitySlug(citySlug: string): Promise<Institution[]> {
+  const data = await getCache();
+  const city = data.cities?.find(c => c.slug === citySlug);
+  if (!city) return [];
+  return (data.institutions || [])
+    .filter(i => i.cityId === city.id && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+export async function getInstitutionsByType(type: InstitutionType): Promise<Institution[]> {
+  const data = await getCache();
+  return (data.institutions || [])
+    .filter(i => i.type === type && i.status === 'PUBLISHED')
+    .map(i => buildInstitution(i, data));
+}
+
+// =============================================================================
+// PUBLIC API - ARTISTS
+// =============================================================================
 
 export async function getAllArtists(): Promise<Artist[]> {
   const data = await getCache();
@@ -425,23 +646,65 @@ export async function getAllArtists(): Promise<Artist[]> {
 export async function getArtistBySlug(slug: string): Promise<Artist | null> {
   const data = await getCache();
   const row = data.artists?.find(a => a.slug === slug);
-  if (!row) return null;
-  return buildArtist(row, data);
+  return row ? buildArtist(row, data) : null;
 }
 
 export async function getArtistById(id: string): Promise<Artist | null> {
   const data = await getCache();
   const row = data.artists?.find(a => a.id === id);
-  if (!row) return null;
-  return buildArtist(row, data);
+  return row ? buildArtist(row, data) : null;
 }
 
-export async function getArtistsByMedium(medium: Medium): Promise<Artist[]> {
+export async function getArtistsByObjectType(objectTypeId: string): Promise<Artist[]> {
   const data = await getCache();
   return (data.artists || [])
-    .filter(a => a.status === 'PUBLISHED' && (a.medium === medium || a.medium === 'BOTH'))
+    .filter(a => a.primaryObjectTypeId === objectTypeId && a.status === 'PUBLISHED')
     .map(a => buildArtist(a, data));
 }
+
+export async function getArtistsByMovement(movementId: string): Promise<Artist[]> {
+  const data = await getCache();
+  const artistIds = data.artistMovements
+    ?.filter(am => am.movementId === movementId)
+    .map(am => am.artistId) || [];
+  return (data.artists || [])
+    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtist(a, data));
+}
+
+export async function getArtistsByTheme(themeId: string): Promise<Artist[]> {
+  const data = await getCache();
+  const artistIds = data.artistThemes
+    ?.filter(at => at.themeId === themeId)
+    .map(at => at.artistId) || [];
+  return (data.artists || [])
+    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtist(a, data));
+}
+
+export async function getArtistsByCity(cityId: string): Promise<Artist[]> {
+  const data = await getCache();
+  const artistIds = data.artistCities
+    ?.filter(ac => ac.cityId === cityId)
+    .map(ac => ac.artistId) || [];
+  return (data.artists || [])
+    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtist(a, data));
+}
+
+export async function getRelatedArtists(artistId: string): Promise<Artist[]> {
+  const data = await getCache();
+  const relatedIds = data.artistRelations
+    ?.filter(r => r.fromArtistId === artistId || r.toArtistId === artistId)
+    .map(r => r.fromArtistId === artistId ? r.toArtistId : r.fromArtistId) || [];
+  return (data.artists || [])
+    .filter(a => relatedIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtist(a, data));
+}
+
+// =============================================================================
+// PUBLIC API - ARTWORKS
+// =============================================================================
 
 export async function getAllArtworks(): Promise<Artwork[]> {
   const data = await getCache();
@@ -453,21 +716,63 @@ export async function getAllArtworks(): Promise<Artwork[]> {
 export async function getArtworkBySlug(slug: string): Promise<Artwork | null> {
   const data = await getCache();
   const row = data.artworks?.find(a => a.slug === slug);
-  if (!row) return null;
-  return buildArtwork(row, data);
+  return row ? buildArtwork(row, data) : null;
 }
 
 export async function getArtworkById(id: string): Promise<Artwork | null> {
   const data = await getCache();
   const row = data.artworks?.find(a => a.id === id);
-  if (!row) return null;
-  return buildArtwork(row, data);
+  return row ? buildArtwork(row, data) : null;
 }
 
 export async function getArtworksByArtist(artistId: string): Promise<Artwork[]> {
   const data = await getCache();
   return (data.artworks || [])
     .filter(a => a.artistId === artistId && a.status === 'PUBLISHED')
+    .map(a => buildArtwork(a, data));
+}
+
+export async function getArtworksByObjectType(objectTypeId: string): Promise<Artwork[]> {
+  const data = await getCache();
+  return (data.artworks || [])
+    .filter(a => a.objectTypeId === objectTypeId && a.status === 'PUBLISHED')
+    .map(a => buildArtwork(a, data));
+}
+
+export async function getArtworksByGenre(genreId: string): Promise<Artwork[]> {
+  const data = await getCache();
+  return (data.artworks || [])
+    .filter(a => a.genreId === genreId && a.status === 'PUBLISHED')
+    .map(a => buildArtwork(a, data));
+}
+
+export async function getArtworksByTheme(themeId: string): Promise<Artwork[]> {
+  const data = await getCache();
+  const artworkIds = data.artworkThemes
+    ?.filter(at => at.themeId === themeId)
+    .map(at => at.artworkId) || [];
+  return (data.artworks || [])
+    .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtwork(a, data));
+}
+
+export async function getArtworksBySubject(subjectId: string): Promise<Artwork[]> {
+  const data = await getCache();
+  const artworkIds = data.artworkSubjects
+    ?.filter(as => as.subjectId === subjectId)
+    .map(as => as.artworkId) || [];
+  return (data.artworks || [])
+    .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
+    .map(a => buildArtwork(a, data));
+}
+
+export async function getArtworksByCity(cityId: string): Promise<Artwork[]> {
+  const data = await getCache();
+  const artworkIds = data.artworkCities
+    ?.filter(ac => ac.cityId === cityId)
+    .map(ac => ac.artworkId) || [];
+  return (data.artworks || [])
+    .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
     .map(a => buildArtwork(a, data));
 }
 
@@ -478,103 +783,10 @@ export async function getIconicArtworks(): Promise<Artwork[]> {
     .map(a => buildArtwork(a, data));
 }
 
-export async function getAllMovements(): Promise<Movement[]> {
-  const data = await getCache();
-  return (data.movements || []).map(m => buildMovement(m));
-}
+// =============================================================================
+// PUBLIC API - SEARCH
+// =============================================================================
 
-export async function getMovementBySlug(slug: string): Promise<Movement | null> {
-  const data = await getCache();
-  const row = data.movements?.find(m => m.slug === slug);
-  if (!row) return null;
-  return buildMovement(row);
-}
-
-export async function getArtistsByMovement(movementId: string): Promise<Artist[]> {
-  const data = await getCache();
-  const artistIds = (data.artistMovements || [])
-    .filter(am => am.movementId === movementId)
-    .map(am => am.artistId);
-  return (data.artists || [])
-    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtist(a, data));
-}
-
-export async function getAllThemes(): Promise<Theme[]> {
-  const data = await getCache();
-  return (data.themes || []).map(t => buildTheme(t));
-}
-
-export async function getThemeBySlug(slug: string): Promise<Theme | null> {
-  const data = await getCache();
-  const row = data.themes?.find(t => t.slug === slug);
-  if (!row) return null;
-  return buildTheme(row);
-}
-
-export async function getArtistsByTheme(themeId: string): Promise<Artist[]> {
-  const data = await getCache();
-  const artistIds = (data.artistThemes || [])
-    .filter(at => at.themeId === themeId)
-    .map(at => at.artistId);
-  return (data.artists || [])
-    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtist(a, data));
-}
-
-export async function getArtworksByTheme(themeId: string): Promise<Artwork[]> {
-  const data = await getCache();
-  const artworkIds = (data.artworkThemes || [])
-    .filter(at => at.themeId === themeId)
-    .map(at => at.artworkId);
-  return (data.artworks || [])
-    .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtwork(a, data));
-}
-
-export async function getAllCities(): Promise<City[]> {
-  const data = await getCache();
-  return (data.cities || []).map(c => buildCity(c));
-}
-
-export async function getCityBySlug(slug: string): Promise<City | null> {
-  const data = await getCache();
-  const row = data.cities?.find(c => c.slug === slug);
-  if (!row) return null;
-  return buildCity(row);
-}
-
-export async function getArtistsByCity(cityId: string): Promise<Artist[]> {
-  const data = await getCache();
-  const artistIds = (data.artistCities || [])
-    .filter(ac => ac.cityId === cityId)
-    .map(ac => ac.artistId);
-  return (data.artists || [])
-    .filter(a => artistIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtist(a, data));
-}
-
-export async function getArtworksByCity(cityId: string): Promise<Artwork[]> {
-  const data = await getCache();
-  const artworkIds = (data.artworkCities || [])
-    .filter(ac => ac.cityId === cityId)
-    .map(ac => ac.artworkId);
-  return (data.artworks || [])
-    .filter(a => artworkIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtwork(a, data));
-}
-
-export async function getRelatedArtists(artistId: string): Promise<Artist[]> {
-  const data = await getCache();
-  const relatedIds = (data.artistRelations || [])
-    .filter(r => r.fromArtistId === artistId || r.toArtistId === artistId)
-    .map(r => r.fromArtistId === artistId ? r.toArtistId : r.fromArtistId);
-  return (data.artists || [])
-    .filter(a => relatedIds.includes(a.id) && a.status === 'PUBLISHED')
-    .map(a => buildArtist(a, data));
-}
-
-// Search function
 export async function searchAll(query: string): Promise<{
   artists: Artist[];
   artworks: Artwork[];
@@ -602,7 +814,10 @@ export async function searchAll(query: string): Promise<{
   return { artists, artworks };
 }
 
-// Count functions
+// =============================================================================
+// PUBLIC API - COUNTS
+// =============================================================================
+
 export async function countArtists(): Promise<number> {
   const data = await getCache();
   return (data.artists || []).filter(a => a.status === 'PUBLISHED').length;
@@ -628,44 +843,6 @@ export async function countCities(): Promise<number> {
   return (data.cities || []).length;
 }
 
-// Institution functions
-export async function getAllInstitutions(): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionBySlug(slug: string): Promise<Institution | null> {
-  const data = await getCache();
-  const row = data.institutions?.find(i => i.slug === slug);
-  if (!row) return null;
-  return buildInstitution(row, data);
-}
-
-export async function getInstitutionsByCity(cityId: string): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.cityId === cityId && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionsByCitySlug(citySlug: string): Promise<Institution[]> {
-  const data = await getCache();
-  const city = data.cities?.find(c => c.slug === citySlug);
-  if (!city) return [];
-  return (data.institutions || [])
-    .filter(i => i.cityId === city.id && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
-export async function getInstitutionsByType(type: InstitutionType): Promise<Institution[]> {
-  const data = await getCache();
-  return (data.institutions || [])
-    .filter(i => i.type === type && i.status === 'PUBLISHED')
-    .map(i => buildInstitution(i, data));
-}
-
 export async function countInstitutions(): Promise<number> {
   const data = await getCache();
   return (data.institutions || []).filter(i => i.status === 'PUBLISHED').length;
@@ -675,3 +852,25 @@ export async function countInstitutionsByCity(cityId: string): Promise<number> {
   const data = await getCache();
   return (data.institutions || []).filter(i => i.cityId === cityId && i.status === 'PUBLISHED').length;
 }
+
+export async function countObjectTypes(): Promise<number> {
+  const data = await getCache();
+  return (data.objectTypes || []).length;
+}
+
+export async function countGenres(): Promise<number> {
+  const data = await getCache();
+  return (data.genres || []).length;
+}
+
+export async function countSubjectTerms(): Promise<number> {
+  const data = await getCache();
+  return (data.subjectTerms || []).length;
+}
+
+// =============================================================================
+// LEGACY COMPATIBILITY
+// =============================================================================
+
+/** @deprecated Use getArtistsByObjectType instead */
+export const getArtistsByMedium = getArtistsByObjectType;

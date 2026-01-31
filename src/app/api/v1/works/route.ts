@@ -19,12 +19,20 @@ export async function GET(request: NextRequest) {
     // Get all artworks
     const artworks = await getArtworks();
 
-    // Optional: filter by medium
-    const medium = searchParams.get('medium');
+    // Optional: filter by object type
+    const objectType = searchParams.get('objectType');
     let filtered = artworks;
-    if (medium) {
+    if (objectType) {
       filtered = artworks.filter(a =>
-        a.medium === medium.toUpperCase() || a.medium === 'BOTH'
+        a.objectType?.slug === objectType.toLowerCase()
+      );
+    }
+
+    // Optional: filter by genre
+    const genre = searchParams.get('genre');
+    if (genre) {
+      filtered = filtered.filter(a =>
+        a.genre?.slug === genre.toLowerCase()
       );
     }
 

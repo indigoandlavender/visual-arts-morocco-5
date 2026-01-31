@@ -64,7 +64,7 @@ export function Footer() {
                 Explore
               </span>
               <div className="flex flex-col gap-3">
-                {['Artists', 'Works', 'Movements', 'Cities', 'Themes'].map((item) => (
+                {['Artists', 'Works', 'Movements', 'Cities', 'Institutions'].map((item) => (
                   <Link
                     key={item}
                     href={`/${item.toLowerCase()}`}

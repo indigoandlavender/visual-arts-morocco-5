@@ -86,7 +86,7 @@ export default async function ArtistPage({ params }: PageProps) {
               </p>
             </div>
             <span className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium">
-              {artist.medium}
+              {artist.primaryObjectType?.name || 'Artist'}
             </span>
           </div>
         </header>
