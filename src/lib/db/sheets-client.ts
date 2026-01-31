@@ -1,12 +1,10 @@
-import { google } from 'googleapis';
 import crypto from 'crypto';
-import path from 'path';
-import fs from 'fs';
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
-let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 let cachedAccessToken: { token: string; expiry: number } | null = null;
+let cachedCredentials: { email: string; privateKey: string } | null = null;
 
 // Fix private key that may have been corrupted during encoding/copying
 function fixPrivateKey(key: string): string {
@@ -88,8 +86,36 @@ function createSignedJwt(email: string, privateKey: string, scopes: string[]): s
   return `${signatureInput}.${signature}`;
 }
 
+// Get credentials from environment
+function getCredentials(): { email: string; privateKey: string } {
+  if (cachedCredentials) return cachedCredentials;
+
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
+    const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+    const credentials = parseCredentials(decoded);
+    cachedCredentials = {
+      email: credentials.client_email as string,
+      privateKey: fixPrivateKey(credentials.private_key as string),
+    };
+    return cachedCredentials;
+  }
+
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    const credentials = parseCredentials(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    cachedCredentials = {
+      email: credentials.client_email as string,
+      privateKey: fixPrivateKey(credentials.private_key as string),
+    };
+    return cachedCredentials;
+  }
+
+  throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_BASE64 or GOOGLE_SERVICE_ACCOUNT_KEY env var.');
+}
+
 // Get access token using signed JWT
-async function getAccessToken(email: string, privateKey: string): Promise<string> {
+async function getAccessToken(): Promise<string> {
+  const { email, privateKey } = getCredentials();
+
   // Check cache
   if (cachedAccessToken && cachedAccessToken.expiry > Date.now() + 60000) {
     return cachedAccessToken.token;
@@ -122,71 +148,24 @@ async function getAccessToken(email: string, privateKey: string): Promise<string
   return data.access_token;
 }
 
-// Custom auth client that uses our manual JWT signing
-class ManualAuthClient {
-  private email: string;
-  private privateKey: string;
-
-  constructor(email: string, privateKey: string) {
-    this.email = email;
-    this.privateKey = privateKey;
-  }
-
-  async getAccessToken(): Promise<{ token: string }> {
-    const token = await getAccessToken(this.email, this.privateKey);
-    return { token };
-  }
-
-  async getRequestHeaders(): Promise<{ Authorization: string }> {
-    const token = await getAccessToken(this.email, this.privateKey);
-    return { Authorization: `Bearer ${token}` };
-  }
+// Make authenticated request to Sheets API
+async function sheetsRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getAccessToken();
+  const response = await fetch(`${SHEETS_API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  return response;
 }
 
+// Legacy export for compatibility - not actually used anymore
 export async function getSheetsClient() {
-  if (sheetsClient) return sheetsClient;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let auth: any;
-
-  // Check for base64 encoded credentials
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
-    const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
-    const credentials = parseCredentials(decoded);
-    if (credentials.private_key && typeof credentials.private_key === 'string') {
-      credentials.private_key = fixPrivateKey(credentials.private_key);
-    }
-    auth = new ManualAuthClient(
-      credentials.client_email as string,
-      credentials.private_key as string
-    );
-  }
-  // Check for raw JSON credentials
-  else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-    const credentials = parseCredentials(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
-    if (credentials.private_key && typeof credentials.private_key === 'string') {
-      credentials.private_key = fixPrivateKey(credentials.private_key);
-    }
-    auth = new ManualAuthClient(
-      credentials.client_email as string,
-      credentials.private_key as string
-    );
-  }
-  // Fall back to credentials file (local dev)
-  else {
-    const keyFilePath = path.join(process.cwd(), 'credentials/google-service-account.json');
-    if (fs.existsSync(keyFilePath)) {
-      auth = new google.auth.GoogleAuth({
-        keyFile: keyFilePath,
-        scopes: SCOPES,
-      });
-    } else {
-      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_BASE64 or GOOGLE_SERVICE_ACCOUNT_KEY env var.');
-    }
-  }
-
-  sheetsClient = google.sheets({ version: 'v4', auth });
-  return sheetsClient;
+  // This is kept for any code that might import it, but we use direct API calls now
+  return null;
 }
 
 export function getSheetId() {
@@ -221,19 +200,23 @@ export type SheetName = typeof SHEETS[keyof typeof SHEETS];
 
 // Generic function to read all rows from a sheet
 export async function readSheet<T>(sheetName: SheetName): Promise<T[]> {
-  const sheets = await getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: getSheetId(),
-    range: `${sheetName}!A:ZZ`,
-  });
+  const sheetId = getSheetId();
+  const range = encodeURIComponent(`${sheetName}!A:ZZ`);
+  const response = await sheetsRequest(`/${sheetId}/values/${range}`);
 
-  const rows = response.data.values;
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to read sheet ${sheetName}: ${error}`);
+  }
+
+  const data = await response.json();
+  const rows = data.values;
   if (!rows || rows.length < 2) return [];
 
   const headers = rows[0] as string[];
-  const data = rows.slice(1);
+  const rowData = rows.slice(1);
 
-  return data.map((row) => {
+  return rowData.map((row: string[]) => {
     const obj: Record<string, unknown> = {};
     headers.forEach((header, index) => {
       const value = row[index];
@@ -260,10 +243,9 @@ export async function writeSheet<T extends Record<string, unknown>>(
   data: T[],
   headers?: string[]
 ): Promise<void> {
-  const sheets = await getSheetsClient();
-
   if (data.length === 0) return;
 
+  const sheetId = getSheetId();
   const cols = headers || Object.keys(data[0]);
   const values = [
     cols,
@@ -278,17 +260,16 @@ export async function writeSheet<T extends Record<string, unknown>>(
   ];
 
   // Clear existing data first
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: getSheetId(),
-    range: `${sheetName}!A:ZZ`,
+  const clearRange = encodeURIComponent(`${sheetName}!A:ZZ`);
+  await sheetsRequest(`/${sheetId}/values/${clearRange}:clear`, {
+    method: 'POST',
   });
 
   // Write new data
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: getSheetId(),
-    range: `${sheetName}!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values },
+  const writeRange = encodeURIComponent(`${sheetName}!A1`);
+  await sheetsRequest(`/${sheetId}/values/${writeRange}?valueInputOption=RAW`, {
+    method: 'PUT',
+    body: JSON.stringify({ values }),
   });
 }
 
@@ -298,10 +279,9 @@ export async function appendToSheet<T extends Record<string, unknown>>(
   data: T[],
   headers?: string[]
 ): Promise<void> {
-  const sheets = await getSheetsClient();
-
   if (data.length === 0) return;
 
+  const sheetId = getSheetId();
   const cols = headers || Object.keys(data[0]);
   const values = data.map((row) =>
     cols.map((col) => {
@@ -312,35 +292,36 @@ export async function appendToSheet<T extends Record<string, unknown>>(
     })
   );
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: getSheetId(),
-    range: `${sheetName}!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values },
+  const range = encodeURIComponent(`${sheetName}!A1`);
+  await sheetsRequest(`/${sheetId}/values/${range}:append?valueInputOption=RAW`, {
+    method: 'POST',
+    body: JSON.stringify({ values }),
   });
 }
 
 // Create all required sheets if they don't exist
 export async function initializeSheets(): Promise<void> {
-  const sheets = await getSheetsClient();
+  const sheetId = getSheetId();
 
   // Get existing sheets
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId: getSheetId(),
-  });
+  const response = await sheetsRequest(`/${sheetId}`);
+  if (!response.ok) {
+    throw new Error('Failed to get spreadsheet info');
+  }
 
-  const existingSheets = spreadsheet.data.sheets?.map(s => s.properties?.title) || [];
+  const spreadsheet = await response.json();
+  const existingSheets = spreadsheet.sheets?.map((s: { properties?: { title?: string } }) => s.properties?.title) || [];
   const requiredSheets = Object.values(SHEETS);
   const missingSheets = requiredSheets.filter(s => !existingSheets.includes(s));
 
   if (missingSheets.length > 0) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: getSheetId(),
-      requestBody: {
+    await sheetsRequest(`/${sheetId}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({
         requests: missingSheets.map(title => ({
           addSheet: { properties: { title } }
         }))
-      }
+      }),
     });
   }
 }
