@@ -274,7 +274,7 @@ async function getCache() {
   } catch (error) {
     console.error('Error fetching data from Google Sheets:', error);
     if (!cache.timestamp) {
-      throw new Error('No Google credentials found. Set GOOGLE_SERVICE_ACCOUNT_KEY env var or add credentials file.');
+      throw new Error(`Failed to fetch data from Google Sheets: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

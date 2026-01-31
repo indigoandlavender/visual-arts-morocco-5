@@ -114,14 +114,20 @@ function getCredentials(): { email: string; privateKey: string } {
 
 // Get access token using signed JWT
 async function getAccessToken(): Promise<string> {
-  const { email, privateKey } = getCredentials();
-
-  // Check cache
+  // Check cache first
   if (cachedAccessToken && cachedAccessToken.expiry > Date.now() + 60000) {
     return cachedAccessToken.token;
   }
 
-  const jwt = createSignedJwt(email, privateKey, SCOPES);
+  const { email, privateKey } = getCredentials();
+
+  let jwt: string;
+  try {
+    jwt = createSignedJwt(email, privateKey, SCOPES);
+  } catch (error) {
+    console.error('JWT signing failed:', error);
+    throw new Error(`JWT signing failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -136,6 +142,7 @@ async function getAccessToken(): Promise<string> {
 
   if (!response.ok) {
     const error = await response.text();
+    console.error('Token exchange failed:', error);
     throw new Error(`Failed to get access token: ${error}`);
   }
 
