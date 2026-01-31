@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { readSheetValues } from '@/lib/db/sheets-client';
 
 const NEXUS_SHEET_ID = process.env.NEXUS_SHEET_ID || '1OIw-cgup17vdimqveVNOmSBSrRbykuTVM39Umm-PJtQ';
+const NEXUS_LEGAL_SHEET = process.env.NEXUS_LEGAL_SHEET || 'Legal_Pages';
 
 const DEFAULT_LEGAL_LINKS = [
   { label: 'Privacy', href: '/privacy' },
@@ -14,8 +15,13 @@ const DEFAULT_LEGAL_LINKS = [
 ];
 
 async function getLegalPages(): Promise<Array<{ label: string; href: string }>> {
+  // Skip Nexus fetch if no sheet ID is configured
+  if (!process.env.NEXUS_SHEET_ID) {
+    return DEFAULT_LEGAL_LINKS;
+  }
+
   try {
-    const rows = await readSheetValues(NEXUS_SHEET_ID, 'Legal_Pages!A:D');
+    const rows = await readSheetValues(NEXUS_SHEET_ID, `${NEXUS_LEGAL_SHEET}!A:D`);
 
     if (!rows || rows.length < 2) {
       return DEFAULT_LEGAL_LINKS;
@@ -33,8 +39,8 @@ async function getLegalPages(): Promise<Array<{ label: string; href: string }>> 
       label: row[titleIdx] || row[slugIdx],
       href: `/${row[slugIdx]}`,
     }));
-  } catch (error) {
-    console.error('Error fetching legal pages from Nexus:', error);
+  } catch {
+    // Silently fall back to defaults if Nexus sheet is unavailable
     return DEFAULT_LEGAL_LINKS;
   }
 }
