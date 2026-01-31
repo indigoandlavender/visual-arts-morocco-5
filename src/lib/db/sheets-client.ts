@@ -1,4 +1,6 @@
 import { google } from 'googleapis';
+import { JWT } from 'google-auth-library';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 
@@ -7,6 +9,7 @@ const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
 
 // Fix private key that may have been corrupted during encoding/copying
+// and convert to a format compatible with OpenSSL 3.0
 function fixPrivateKey(key: string): string {
   if (!key) return key;
 
@@ -29,6 +32,21 @@ function fixPrivateKey(key: string): string {
     fixed = fixed
       .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
       .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n');
+  }
+
+  // Try to normalize the key using Node's crypto module for OpenSSL 3.0 compatibility
+  try {
+    const keyObject = crypto.createPrivateKey({
+      key: fixed,
+      format: 'pem',
+    });
+    // Export back to PEM format - this normalizes the key
+    fixed = keyObject.export({
+      type: 'pkcs8',
+      format: 'pem',
+    }) as string;
+  } catch {
+    // If conversion fails, return the fixed string as-is
   }
 
   return fixed;
@@ -66,8 +84,10 @@ export async function getSheetsClient() {
     if (credentials.private_key && typeof credentials.private_key === 'string') {
       credentials.private_key = fixPrivateKey(credentials.private_key);
     }
-    auth = new google.auth.GoogleAuth({
-      credentials,
+    // Use JWT directly for better control over key handling
+    auth = new JWT({
+      email: credentials.client_email as string,
+      key: credentials.private_key as string,
       scopes: SCOPES,
     });
   }
@@ -77,8 +97,10 @@ export async function getSheetsClient() {
     if (credentials.private_key && typeof credentials.private_key === 'string') {
       credentials.private_key = fixPrivateKey(credentials.private_key);
     }
-    auth = new google.auth.GoogleAuth({
-      credentials,
+    // Use JWT directly for better control over key handling
+    auth = new JWT({
+      email: credentials.client_email as string,
+      key: credentials.private_key as string,
       scopes: SCOPES,
     });
   }
