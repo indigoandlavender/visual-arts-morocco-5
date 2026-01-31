@@ -86,7 +86,7 @@ export async function GET() {
     },
     copyright: {
       year: new Date().getFullYear(),
-      name: 'Morocco Art Archive',
+      name: 'Slow Morocco',
     },
   });
 }
