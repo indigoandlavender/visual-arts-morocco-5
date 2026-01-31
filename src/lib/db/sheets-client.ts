@@ -1,5 +1,4 @@
 import { google } from 'googleapis';
-import { JWT } from 'google-auth-library';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
@@ -7,9 +6,9 @@ import fs from 'fs';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
 let sheetsClient: ReturnType<typeof google.sheets> | null = null;
+let cachedAccessToken: { token: string; expiry: number } | null = null;
 
 // Fix private key that may have been corrupted during encoding/copying
-// and convert to a format compatible with OpenSSL 3.0
 function fixPrivateKey(key: string): string {
   if (!key) return key;
 
@@ -26,27 +25,14 @@ function fixPrivateKey(key: string): string {
   // Replace literal \n strings with actual newlines
   fixed = fixed.replace(/\\n/g, '\n');
 
-  // Ensure proper PEM format
+  // Ensure proper PEM format with line breaks every 64 chars in the body
   if (!fixed.includes('\n') && fixed.includes('-----BEGIN')) {
-    // Key has no newlines at all - try to reconstruct
-    fixed = fixed
-      .replace(/-----BEGIN PRIVATE KEY-----/, '-----BEGIN PRIVATE KEY-----\n')
-      .replace(/-----END PRIVATE KEY-----/, '\n-----END PRIVATE KEY-----\n');
-  }
-
-  // Try to normalize the key using Node's crypto module for OpenSSL 3.0 compatibility
-  try {
-    const keyObject = crypto.createPrivateKey({
-      key: fixed,
-      format: 'pem',
-    });
-    // Export back to PEM format - this normalizes the key
-    fixed = keyObject.export({
-      type: 'pkcs8',
-      format: 'pem',
-    }) as string;
-  } catch {
-    // If conversion fails, return the fixed string as-is
+    const match = fixed.match(/-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----/);
+    if (match) {
+      const body = match[1].replace(/\s/g, '');
+      const formatted = body.match(/.{1,64}/g)?.join('\n') || body;
+      fixed = `-----BEGIN PRIVATE KEY-----\n${formatted}\n-----END PRIVATE KEY-----\n`;
+    }
   }
 
   return fixed;
@@ -72,10 +58,95 @@ function parseCredentials(str: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+// Create JWT and sign it manually for OpenSSL 3.0 compatibility
+function createSignedJwt(email: string, privateKey: string, scopes: string[]): string {
+  const now = Math.floor(Date.now() / 1000);
+  const expiry = now + 3600; // 1 hour
+
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
+
+  const payload = {
+    iss: email,
+    scope: scopes.join(' '),
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: expiry,
+  };
+
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  // Sign using crypto.sign with explicit algorithm
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(signatureInput);
+  const signature = sign.sign(privateKey, 'base64url');
+
+  return `${signatureInput}.${signature}`;
+}
+
+// Get access token using signed JWT
+async function getAccessToken(email: string, privateKey: string): Promise<string> {
+  // Check cache
+  if (cachedAccessToken && cachedAccessToken.expiry > Date.now() + 60000) {
+    return cachedAccessToken.token;
+  }
+
+  const jwt = createSignedJwt(email, privateKey, SCOPES);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get access token: ${error}`);
+  }
+
+  const data = await response.json();
+  cachedAccessToken = {
+    token: data.access_token,
+    expiry: Date.now() + (data.expires_in * 1000),
+  };
+
+  return data.access_token;
+}
+
+// Custom auth client that uses our manual JWT signing
+class ManualAuthClient {
+  private email: string;
+  private privateKey: string;
+
+  constructor(email: string, privateKey: string) {
+    this.email = email;
+    this.privateKey = privateKey;
+  }
+
+  async getAccessToken(): Promise<{ token: string }> {
+    const token = await getAccessToken(this.email, this.privateKey);
+    return { token };
+  }
+
+  async getRequestHeaders(): Promise<{ Authorization: string }> {
+    const token = await getAccessToken(this.email, this.privateKey);
+    return { Authorization: `Bearer ${token}` };
+  }
+}
+
 export async function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
-  let auth;
+  let auth: ManualAuthClient | ReturnType<typeof google.auth.GoogleAuth>;
 
   // Check for base64 encoded credentials
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
@@ -84,12 +155,10 @@ export async function getSheetsClient() {
     if (credentials.private_key && typeof credentials.private_key === 'string') {
       credentials.private_key = fixPrivateKey(credentials.private_key);
     }
-    // Use JWT directly for better control over key handling
-    auth = new JWT({
-      email: credentials.client_email as string,
-      key: credentials.private_key as string,
-      scopes: SCOPES,
-    });
+    auth = new ManualAuthClient(
+      credentials.client_email as string,
+      credentials.private_key as string
+    );
   }
   // Check for raw JSON credentials
   else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
@@ -97,12 +166,10 @@ export async function getSheetsClient() {
     if (credentials.private_key && typeof credentials.private_key === 'string') {
       credentials.private_key = fixPrivateKey(credentials.private_key);
     }
-    // Use JWT directly for better control over key handling
-    auth = new JWT({
-      email: credentials.client_email as string,
-      key: credentials.private_key as string,
-      scopes: SCOPES,
-    });
+    auth = new ManualAuthClient(
+      credentials.client_email as string,
+      credentials.private_key as string
+    );
   }
   // Fall back to credentials file (local dev)
   else {
@@ -117,7 +184,7 @@ export async function getSheetsClient() {
     }
   }
 
-  sheetsClient = google.sheets({ version: 'v4', auth });
+  sheetsClient = google.sheets({ version: 'v4', auth: auth as never });
   return sheetsClient;
 }
 
