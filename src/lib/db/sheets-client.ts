@@ -146,7 +146,8 @@ class ManualAuthClient {
 export async function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
-  let auth: ManualAuthClient | ReturnType<typeof google.auth.GoogleAuth>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let auth: any;
 
   // Check for base64 encoded credentials
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
@@ -184,7 +185,7 @@ export async function getSheetsClient() {
     }
   }
 
-  sheetsClient = google.sheets({ version: 'v4', auth: auth as never });
+  sheetsClient = google.sheets({ version: 'v4', auth });
   return sheetsClient;
 }
 
