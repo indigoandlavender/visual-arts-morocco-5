@@ -3,32 +3,9 @@
 // =============================================================================
 
 import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { getSheetsClient } from '@/lib/db/sheets-client';
 
-const NEXUS_SHEET_ID = '1OIw-cgup17vdimqveVNOmSBSrRbykuTVM39Umm-PJtQ';
-
-async function getSheetsClient() {
-  let auth;
-
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
-    const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
-    const credentials = JSON.parse(decoded);
-    auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
-  } else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
-    auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-    });
-  } else {
-    throw new Error('No Google credentials found');
-  }
-
-  return google.sheets({ version: 'v4', auth });
-}
+const NEXUS_SHEET_ID = process.env.NEXUS_SHEET_ID || '1OIw-cgup17vdimqveVNOmSBSrRbykuTVM39Umm-PJtQ';
 
 async function getLegalPages(): Promise<Array<{ label: string; href: string }>> {
   try {
