@@ -3,26 +3,22 @@
 // =============================================================================
 
 import { NextResponse } from 'next/server';
-import { getSheetsClient } from '@/lib/db/sheets-client';
+import { readSheetValues } from '@/lib/db/sheets-client';
 
 const NEXUS_SHEET_ID = process.env.NEXUS_SHEET_ID || '1OIw-cgup17vdimqveVNOmSBSrRbykuTVM39Umm-PJtQ';
 
+const DEFAULT_LEGAL_LINKS = [
+  { label: 'Privacy', href: '/privacy' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'Disclaimer', href: '/disclaimer' },
+];
+
 async function getLegalPages(): Promise<Array<{ label: string; href: string }>> {
   try {
-    const sheets = await getSheetsClient();
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: NEXUS_SHEET_ID,
-      range: 'Legal_Pages!A:D',
-    });
+    const rows = await readSheetValues(NEXUS_SHEET_ID, 'Legal_Pages!A:D');
 
-    const rows = response.data.values;
     if (!rows || rows.length < 2) {
-      // Return default legal links if sheet is empty
-      return [
-        { label: 'Privacy', href: '/privacy' },
-        { label: 'Terms', href: '/terms' },
-        { label: 'Disclaimer', href: '/disclaimer' },
-      ];
+      return DEFAULT_LEGAL_LINKS;
     }
 
     const headers = rows[0] as string[];
@@ -30,11 +26,7 @@ async function getLegalPages(): Promise<Array<{ label: string; href: string }>> 
     const titleIdx = headers.indexOf('title');
 
     if (slugIdx === -1 || titleIdx === -1) {
-      return [
-        { label: 'Privacy', href: '/privacy' },
-        { label: 'Terms', href: '/terms' },
-        { label: 'Disclaimer', href: '/disclaimer' },
-      ];
+      return DEFAULT_LEGAL_LINKS;
     }
 
     return rows.slice(1).map((row) => ({
@@ -43,12 +35,7 @@ async function getLegalPages(): Promise<Array<{ label: string; href: string }>> 
     }));
   } catch (error) {
     console.error('Error fetching legal pages from Nexus:', error);
-    // Return fallback
-    return [
-      { label: 'Privacy', href: '/privacy' },
-      { label: 'Terms', href: '/terms' },
-      { label: 'Disclaimer', href: '/disclaimer' },
-    ];
+    return DEFAULT_LEGAL_LINKS;
   }
 }
 

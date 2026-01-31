@@ -162,10 +162,18 @@ async function sheetsRequest(endpoint: string, options: RequestInit = {}): Promi
   return response;
 }
 
-// Legacy export for compatibility - not actually used anymore
-export async function getSheetsClient() {
-  // This is kept for any code that might import it, but we use direct API calls now
-  return null;
+// Read raw values from any spreadsheet by ID and range
+export async function readSheetValues(spreadsheetId: string, range: string): Promise<string[][] | null> {
+  const encodedRange = encodeURIComponent(range);
+  const response = await sheetsRequest(`/${spreadsheetId}/values/${encodedRange}`);
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to read sheet: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.values || null;
 }
 
 export function getSheetId() {
